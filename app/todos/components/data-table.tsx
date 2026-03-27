@@ -30,6 +30,7 @@ import {
   TodoSortOrder,
 } from "@/modules/todos/todo.types"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useDebounce } from "use-debounce"
 
 
 interface DataTableProps<TData, TValue> {
@@ -58,6 +59,7 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
   const [queryInput, setQueryInput] = useState(query)
+  const [debouncedQueryInput] = useDebounce(queryInput, 300)
 
   const sorting: SortingState = [
     {
@@ -134,33 +136,29 @@ export function DataTable<TData, TValue>({
   }, [data])
 
   useEffect(() => {
-    const normalizedQuery = queryInput.trim()
+    const normalizedQuery = debouncedQueryInput.trim()
 
     if (normalizedQuery === query) {
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(searchParams.toString())
 
-      if (normalizedQuery) {
-        params.set("query", normalizedQuery)
-      } else {
-        params.delete("query")
-      }
+    if (normalizedQuery) {
+      params.set("query", normalizedQuery)
+    } else {
+      params.delete("query")
+    }
 
-      params.set("page", "1")
+    params.set("page", "1")
 
-      const nextQuery = params.toString()
-      const href = nextQuery ? `${pathname}?${nextQuery}` : pathname
+    const nextQuery = params.toString()
+    const href = nextQuery ? `${pathname}?${nextQuery}` : pathname
 
-      startTransition(() => {
-        router.replace(href)
-      })
-    }, 300)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [queryInput, query, pathname, router, searchParams, startTransition])
+    startTransition(() => {
+      router.replace(href)
+    })
+  }, [debouncedQueryInput, query, pathname, router, searchParams, startTransition])
 
   // TanStack Table is intentionally used here as a headless state/rendering layer.
   // eslint-disable-next-line react-hooks/incompatible-library
