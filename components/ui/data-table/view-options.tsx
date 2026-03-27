@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { type Table } from "@tanstack/react-table"
-import { Settings2 } from "lucide-react"
+import { type Table } from "@tanstack/react-table";
+import { Settings2 } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -10,35 +10,31 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 export function DataTableViewOptions<TData>({
   table,
 }: {
-  table: Table<TData>
+  table: Table<TData>;
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-2"
-        >
+        <Button variant="outline" size="sm" className="ml-2">
           <Settings2 />
           View
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[150px]">
+      <DropdownMenuContent align="end" className="w-37.5">
         <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {table
           .getAllColumns()
           .filter(
             (column) =>
-              typeof column.accessorFn !== "undefined" && column.getCanHide()
+              typeof column.accessorFn !== "undefined" && column.getCanHide(),
           )
           .map((column) => {
             return (
@@ -50,9 +46,9 @@ export function DataTableViewOptions<TData>({
               >
                 {column.id}
               </DropdownMenuCheckboxItem>
-            )
+            );
           })}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

@@ -1,19 +1,14 @@
-"use client"
+"use client";
 
-import { Todo } from "@/modules/todos/todo.types"
-import { ColumnDef } from "@tanstack/react-table"
-import { MoreHorizontal } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Checkbox } from "@/components/ui/checkbox"
-import { DataTableColumnHeader } from "@/components/ui/data-table/column-header"
+import { Todo } from "@/modules/todos/todo.types";
+import { ColumnDef } from "@tanstack/react-table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DataTableColumnHeader } from "@/components/ui/data-table/column-header";
+
+import { Button } from "@/components/ui/button";
+import { deleteTodoAction } from "../actions";
+import { Edit2, Eye, TrashIcon } from "lucide-react";
+import { ButtonGroup } from "@/components/ui/button-group";
 
 export const columns: ColumnDef<Todo>[] = [
   {
@@ -41,17 +36,13 @@ export const columns: ColumnDef<Todo>[] = [
   {
     accessorKey: "id",
     header: ({ column }) => {
-      return (
-        <DataTableColumnHeader column={column} title="ID" />
-      )
+      return <DataTableColumnHeader column={column} title="ID" />;
     },
   },
   {
     accessorKey: "title",
     header: ({ column }) => {
-      return (
-        <DataTableColumnHeader column={column} title="Title" />
-      )
+      return <DataTableColumnHeader column={column} title="Title" />;
     },
   },
   {
@@ -61,31 +52,35 @@ export const columns: ColumnDef<Todo>[] = [
   },
   {
     id: "actions",
+    header: "Actions",
     enableSorting: false,
     cell: ({ row }) => {
-      const todo = row.original
- 
+      const todo = row.original;
+
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(todo.id.toString())}
-            >
-              Copy todo ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View customer</DropdownMenuItem>
-            <DropdownMenuItem>View payment details</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+        <ButtonGroup>
+          <Button size="sm" variant="outline">
+            Edit
+          </Button>
+          <Button size="sm" variant="outline">
+            View
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={async () => {
+              const res = await deleteTodoAction(todo.id);
+
+              if (!res.success) {
+                // show toast / error UI
+                console.error(res.message);
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </ButtonGroup>
+      );
     },
   },
-]
+];

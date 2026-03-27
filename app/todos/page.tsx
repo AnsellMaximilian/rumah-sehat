@@ -1,7 +1,7 @@
 import { getTodosService } from "@/modules/todos/todo.service";
 import { TodoSortBySchema, TodoSortOrderSchema } from "@/modules/todos/todo.schemas";
 import { columns } from "./components/columns";
-import { DataTable } from "./components/data-table";
+import { DataTable } from "@/components/ui/data-table/data-table";
 import { normalizePositiveInt } from "@/lib/utils";
 
 type TodoPageSearchParams = Promise<{
@@ -48,6 +48,16 @@ export default async function Page(
         query={query}
         sortBy={sortBy}
         sortOrder={sortOrder}
+        search={{
+          placeholder: "Search titles...",
+        }}
+        sorting={{
+          defaultSortBy: "id",
+        }}
+        labels={{
+          rowLabel: "todo(s)",
+          updatingMessage: "Updating todos...",
+        }}
       />
     </main>
   )

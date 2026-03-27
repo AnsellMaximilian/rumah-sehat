@@ -10,6 +10,12 @@ import { CreateTodoSchema } from "@/modules/todos/todo.schemas";
 import { treeifyError } from "zod/v4/core";
 import { redirect } from "next/navigation";
 
+export type TodoState = {
+  errors: Record<string, string[]>;
+  message: string;
+  success: boolean;
+};
+
 export async function createTodoAction(formData: FormData) {
   const validatedFields = CreateTodoSchema.safeParse({
     title: formData.get("title"),
@@ -18,6 +24,7 @@ export async function createTodoAction(formData: FormData) {
 
   if (!validatedFields.success) {
     return {
+      success: false,
       errors: treeifyError(validatedFields.error),
       message: "Validation failed",
     };
@@ -30,6 +37,7 @@ export async function createTodoAction(formData: FormData) {
   } catch (error) {
     console.error(error);
     return {
+      success: false,
       message: "Failed to create todo",
     };
   }
@@ -44,6 +52,7 @@ export async function toggleTodoAction(id: number) {
   } catch (error) {
     console.error(error);
     return {
+      success: false,
       message: "Failed to toggle todo",
     };
   }
@@ -54,12 +63,11 @@ export async function toggleTodoAction(id: number) {
 export async function deleteTodoAction(id: number) {
   try {
     await deleteTodoService({ id });
+    revalidatePath("/todos");
+
+    return { success: true };
   } catch (error) {
     console.error(error);
-    return {
-      message: "Failed to delete todo",
-    };
+    return { success: false, message: "Failed to delete todo" };
   }
-
-  revalidatePath("/todos");
 }

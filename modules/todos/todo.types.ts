@@ -3,7 +3,7 @@ export type Todo = {
   title: string;
   text: string | null;
   done: boolean;
-}
+};
 
 export type TodoSortBy = "id" | "title";
 
@@ -15,7 +15,7 @@ export type TodoListInput = {
   query?: string;
   sortBy?: TodoSortBy;
   sortOrder?: TodoSortOrder;
-}
+};
 
 export type TodoPagination = {
   page: number;
@@ -24,8 +24,8 @@ export type TodoPagination = {
   totalPages: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
-}
+};
 
 export type CreateTodoInput = {
-  text: string
-}
+  text: string;
+};

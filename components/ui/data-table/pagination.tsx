@@ -13,27 +13,31 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "../button"
-import { TodoPagination } from "@/modules/todos/todo.types"
+import { DataTablePaginationState } from "./types"
 
 interface DataTablePaginationProps {
-  pagination: TodoPagination
+  pagination: DataTablePaginationState
   onPageChange: (page: number) => void
   onPageSizeChange: (pageSize: number) => void
+  rowLabel?: string
+  rowsPerPageLabel?: string
 }
 
 export function DataTablePagination({
   pagination,
   onPageChange,
   onPageSizeChange,
+  rowLabel = "row(s)",
+  rowsPerPageLabel = "Rows per page",
 }: DataTablePaginationProps) {
   return (
     <div className="flex items-center justify-between px-2">
       <div className="flex-1 text-sm text-muted-foreground">
-        {pagination.total} total todo(s)
+        {pagination.total} total {rowLabel}
       </div>
       <div className="flex items-center space-x-6 lg:space-x-8">
         <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
+          <p className="text-sm font-medium">{rowsPerPageLabel}</p>
           <Select
             value={`${pagination.limit}`}
             onValueChange={(value) => {
