@@ -2,7 +2,7 @@
 
 import { Todo } from "@/modules/todos/todo.types"
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from "lucide-react"
+import { MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -40,7 +40,11 @@ export const columns: ColumnDef<Todo>[] = [
   },
   {
     accessorKey: "id",
-    header: "ID",
+    header: ({ column }) => {
+      return (
+        <DataTableColumnHeader column={column} title="ID" />
+      )
+    },
   },
   {
     accessorKey: "title",
@@ -53,9 +57,11 @@ export const columns: ColumnDef<Todo>[] = [
   {
     accessorKey: "text",
     header: "Text",
+    enableSorting: false,
   },
   {
     id: "actions",
+    enableSorting: false,
     cell: ({ row }) => {
       const todo = row.original
  

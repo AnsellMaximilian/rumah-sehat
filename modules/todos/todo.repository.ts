@@ -1,27 +1,60 @@
-import { desc, eq, count } from "drizzle-orm"
+import { asc, count, desc, eq, ilike } from "drizzle-orm"
 import { todos } from "@/db/schema/todos"
 import { db } from "@/db/drizzle"
+import { TodoSortBy, TodoSortOrder } from "@/modules/todos/todo.types"
 
 export async function getAllTodos() {
     const allTodos = await db.select().from(todos);
     return allTodos
 }
 
-export async function getPaginatedTodos(page: number, limit: number) {
+function getTodoOrderBy(sortBy: TodoSortBy, sortOrder: TodoSortOrder) {
+    const columns = {
+        id: todos.id,
+        title: todos.title,
+    } as const;
+
+    const column = columns[sortBy];
+
+    return sortOrder === "asc" ? asc(column) : desc(column);
+}
+
+function buildTodoSearchFilter(query: string) {
+    if (!query) {
+        return undefined;
+    }
+
+    return ilike(todos.title, `%${query}%`);
+}
+
+export async function getPaginatedTodos(input: {
+    page: number;
+    limit: number;
+    query: string;
+    sortBy: TodoSortBy;
+    sortOrder: TodoSortOrder;
+}) {
+    const { page, limit, query, sortBy, sortOrder } = input;
     const offset = (page - 1) * limit;
-    const paginatedTodos = await db
-        .select()
-        .from(todos)
-        .orderBy(desc(todos.id))
+    const filter = buildTodoSearchFilter(query);
+    const baseQuery = filter
+        ? db.select().from(todos).where(filter)
+        : db.select().from(todos);
+
+    const paginatedTodos = await baseQuery
+        .orderBy(getTodoOrderBy(sortBy, sortOrder))
         .limit(limit)
         .offset(offset);
     return paginatedTodos
 }
 
-export async function getTodosCount() {
-    const [{count: countResult}] = await db
-        .select({ count: count() })
-        .from(todos);
+export async function getTodosCount(query: string) {
+    const filter = buildTodoSearchFilter(query);
+    const baseQuery = filter
+        ? db.select({ count: count() }).from(todos).where(filter)
+        : db.select({ count: count() }).from(todos);
+
+    const [{count: countResult}] = await baseQuery;
     return countResult;
 }
 

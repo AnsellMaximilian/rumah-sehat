@@ -11,3 +11,5 @@ const TodoSchema = z.object({
 
 export const CreateTodoSchema = TodoSchema.omit({ id: true, done: true });
 export const UpdateTodoSchema = TodoSchema.partial().omit({ id: true });
+export const TodoSortBySchema = z.enum(["id", "title"]);
+export const TodoSortOrderSchema = z.enum(["asc", "desc"]);

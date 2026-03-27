@@ -7,45 +7,45 @@ import {
   getPaginatedTodos,
   getTodosCount
 } from "@/modules/todos/todo.repository";
-import { Todo } from "@/modules/todos/todo.types";
+import { TodoSortBySchema, TodoSortOrderSchema } from "@/modules/todos/todo.schemas";
+import { Todo, TodoListInput, TodoPagination } from "@/modules/todos/todo.types";
 
 type PaginatedData<T> = {
   data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  };
+  pagination: TodoPagination;
 };
 
-export async function getTodosService(input?: { 
-    page?: number, 
-    limit?: number
-}): Promise<PaginatedData<Todo>> {
+export async function getTodosService(input: TodoListInput = {}): Promise<PaginatedData<Todo>> {
+    const parsedSortBy = TodoSortBySchema.safeParse(input.sortBy);
+    const parsedSortOrder = TodoSortOrderSchema.safeParse(input.sortOrder);
     
     const page = normalizePositiveInt(input?.page, 1);
     const limit = normalizePositiveInt(input?.limit, 10);
     const safeLimit = Math.min(limit, 100);
-
-    const [data, total] = await Promise.all([
-        getPaginatedTodos(page, safeLimit),
-        getTodosCount(),
-    ]);
-
+    const query = input.query?.trim() ?? "";
+    const sortBy = parsedSortBy.success ? parsedSortBy.data : "id";
+    const sortOrder = parsedSortOrder.success ? parsedSortOrder.data : "desc";
+    const total = await getTodosCount(query);
     const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+    const safePage = Math.min(page, totalPages);
+
+    const data = await getPaginatedTodos({
+        page: safePage,
+        limit: safeLimit,
+        query,
+        sortBy,
+        sortOrder,
+    });
 
     return {
         data,
         pagination: {
-        page,
+        page: safePage,
         limit: safeLimit,
         total,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
+        hasNextPage: safePage < totalPages,
+        hasPreviousPage: safePage > 1,
         },
     };
 

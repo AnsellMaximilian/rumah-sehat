@@ -2,13 +2,11 @@
 
 import {
   ColumnDef,
-  ColumnFiltersState,
   flexRender,
+  type OnChangeFn,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   SortingState,
+  type Updater,
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table"
@@ -22,45 +20,170 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { useState } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { Input } from "@/components/ui/input"
 import { DataTableViewOptions } from "@/components/ui/data-table/view-options"
 import { DataTablePagination } from "@/components/ui/data-table/pagination"
+import {
+  TodoPagination,
+  TodoSortBy,
+  TodoSortOrder,
+} from "@/modules/todos/todo.types"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  pagination: TodoPagination
+  query: string
+  sortBy: TodoSortBy
+  sortOrder: TodoSortOrder
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  pagination,
+  query,
+  sortBy,
+  sortOrder,
 }: DataTableProps<TData, TValue>) {
+  "use no memo";
 
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
-    []
-  )
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
+  const [queryInput, setQueryInput] = useState(query)
 
+  const sorting: SortingState = [
+    {
+      id: sortBy,
+      desc: sortOrder === "desc",
+    },
+  ]
+
+  function getNextHref(updates: Record<string, string | number | undefined>) {
+    const params = new URLSearchParams(searchParams.toString())
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === "") {
+        params.delete(key)
+        return
+      }
+
+      params.set(key, String(value))
+    })
+
+    const nextQuery = params.toString()
+
+    return nextQuery ? `${pathname}?${nextQuery}` : pathname
+  }
+
+  function updateQueryParams(
+    updates: Record<string, string | number | undefined>,
+    navigation: "push" | "replace"
+  ) {
+    const href = getNextHref(updates)
+
+    startTransition(() => {
+      if (navigation === "replace") {
+        router.replace(href)
+        return
+      }
+
+      router.push(href)
+    })
+  }
+
+  const handleSortingChange: OnChangeFn<SortingState> = (
+    updaterOrValue: Updater<SortingState>
+  ) => {
+    const nextSorting =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(sorting)
+        : updaterOrValue
+
+    const nextSort = nextSorting[0]
+    const nextSortBy = (nextSort?.id as TodoSortBy | undefined) ?? "id"
+    const nextSortOrder: TodoSortOrder = nextSort
+      ? nextSort.desc
+        ? "desc"
+        : "asc"
+      : "desc"
+
+    updateQueryParams(
+      {
+        page: 1,
+        sortBy: nextSort ? nextSortBy : "id",
+        sortOrder: nextSortOrder,
+      },
+      "push"
+    )
+  }
+
+  useEffect(() => {
+    setQueryInput(query)
+  }, [query])
+
+  useEffect(() => {
+    setRowSelection({})
+  }, [data])
+
+  useEffect(() => {
+    const normalizedQuery = queryInput.trim()
+
+    if (normalizedQuery === query) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString())
+
+      if (normalizedQuery) {
+        params.set("query", normalizedQuery)
+      } else {
+        params.delete("query")
+      }
+
+      params.set("page", "1")
+
+      const nextQuery = params.toString()
+      const href = nextQuery ? `${pathname}?${nextQuery}` : pathname
+
+      startTransition(() => {
+        router.replace(href)
+      })
+    }, 300)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [queryInput, query, pathname, router, searchParams, startTransition])
+
+  // TanStack Table is intentionally used here as a headless state/rendering layer.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    manualSorting: true,
+    enableMultiSort: false,
+    pageCount: pagination.totalPages,
+    rowCount: pagination.total,
+    onSortingChange: handleSortingChange,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
-      rowSelection
+      rowSelection,
+      pagination: {
+        pageIndex: pagination.page - 1,
+        pageSize: pagination.limit,
+      },
     },
   })
 
@@ -68,16 +191,14 @@ export function DataTable<TData, TValue>({
     <div>
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter titles..."
-          value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("title")?.setFilterValue(event.target.value)
-          }
+          placeholder="Search titles..."
+          value={queryInput}
+          onChange={(event) => setQueryInput(event.target.value)}
           className="max-w-sm"
         />
         <div className="ml-auto text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+          {table.getSelectedRowModel().rows.length} of{" "}
+          {table.getRowModel().rows.length} row(s) selected on this page.
         </div>
         <DataTableViewOptions table={table} />
       </div>
@@ -125,7 +246,22 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table}/>
+      <DataTablePagination
+        pagination={pagination}
+        onPageChange={(page) => updateQueryParams({ page }, "push")}
+        onPageSizeChange={(limit) =>
+          updateQueryParams(
+            {
+              limit,
+              page: 1,
+            },
+            "push"
+          )
+        }
+      />
+      {isPending ? (
+        <p className="mt-2 text-sm text-muted-foreground">Updating todos...</p>
+      ) : null}
     </div>
   )
 }
