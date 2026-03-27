@@ -4,11 +4,15 @@ import { Todo } from "@/modules/todos/todo.types";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "@/components/ui/data-table/column-header";
+import {
+  getDataTableDetailHref,
+  getDataTableEditHref,
+} from "@/components/ui/data-table/utils";
 
 import { Button } from "@/components/ui/button";
 import { deleteTodoAction } from "../actions";
-import { Edit2, Eye, TrashIcon } from "lucide-react";
 import { ButtonGroup } from "@/components/ui/button-group";
+import Link from "next/link";
 
 export const columns: ColumnDef<Todo>[] = [
   {
@@ -59,11 +63,11 @@ export const columns: ColumnDef<Todo>[] = [
 
       return (
         <ButtonGroup>
-          <Button size="sm" variant="outline">
-            Edit
+          <Button asChild size="sm" variant="outline">
+            <Link href={getDataTableEditHref("/todos", todo.id)}>Edit</Link>
           </Button>
-          <Button size="sm" variant="outline">
-            View
+          <Button asChild size="sm" variant="outline">
+            <Link href={getDataTableDetailHref("/todos", todo.id)}>View</Link>
           </Button>
           <Button
             size="sm"

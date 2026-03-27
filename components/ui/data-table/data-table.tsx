@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   ColumnDef,
   flexRender,
@@ -22,9 +23,11 @@ import {
 
 import { useEffect, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { DataTableViewOptions } from "@/components/ui/data-table/view-options";
 import { DataTablePagination } from "@/components/ui/data-table/pagination";
 import {
+  DataTableActions,
   DataTableLabels,
   DataTablePaginationState,
   DataTableQueryParamKeys,
@@ -32,6 +35,10 @@ import {
   DataTableSortOrder,
   DataTableSortingConfig,
 } from "@/components/ui/data-table/types";
+import {
+  getDataTableAddHref,
+  resolveDataTableLabels,
+} from "@/components/ui/data-table/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "use-debounce";
 import { cn } from "@/lib/utils";
@@ -55,6 +62,7 @@ interface DataTableProps<TData, TValue> {
   search?: DataTableSearchConfig;
   sorting: DataTableSortingConfig;
   labels?: DataTableLabels;
+  actions?: DataTableActions;
 }
 
 export function DataTable<TData, TValue>({
@@ -68,6 +76,7 @@ export function DataTable<TData, TValue>({
   search,
   sorting,
   labels,
+  actions,
 }: DataTableProps<TData, TValue>) {
   "use no memo";
 
@@ -81,6 +90,8 @@ export function DataTable<TData, TValue>({
   const queryParamKey = search?.paramKey ?? paramKeys.query;
   const sortByParamKey = sorting.sortByParamKey ?? paramKeys.sortBy;
   const sortOrderParamKey = sorting.sortOrderParamKey ?? paramKeys.sortOrder;
+  const resolvedLabels = resolveDataTableLabels(labels);
+  const addHref = actions?.addHref ?? getDataTableAddHref(pathname);
   const [isPending, startTransition] = useTransition();
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
@@ -232,14 +243,20 @@ export function DataTable<TData, TValue>({
           onChange={(event) => setQueryInput(event.target.value)}
           className="max-w-sm"
         />
-        <div className="ml-auto text-sm text-muted-foreground">
-          {labels?.selectedRowsMessage?.(
-            table.getSelectedRowModel().rows.length,
-            table.getRowModel().rows.length,
-          ) ??
-            `${table.getSelectedRowModel().rows.length} of ${table.getRowModel().rows.length} selected on this page.`}
+        <div className="flex gap-2 ml-auto items-center">
+          <div className="text-sm text-muted-foreground">
+            {resolvedLabels.selectedRowsMessage(
+              table.getSelectedRowModel().rows.length,
+              table.getRowModel().rows.length,
+            )}
+          </div>
+          <DataTableViewOptions table={table} />
+          {!actions?.hideAddButton ? (
+            <Button asChild size="sm">
+              <Link href={addHref}>{resolvedLabels.addLabel}</Link>
+            </Button>
+          ) : null}
         </div>
-        <DataTableViewOptions table={table} />
       </div>
       <div className="overflow-hidden rounded-md border mb-4">
         <Table>
@@ -287,7 +304,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  {labels?.emptyMessage ?? "No results."}
+                  {resolvedLabels.emptyMessage}
                 </TableCell>
               </TableRow>
             )}
@@ -308,12 +325,12 @@ export function DataTable<TData, TValue>({
             "push",
           )
         }
-        rowLabel={labels?.rowLabel}
-        rowsPerPageLabel={labels?.rowsPerPageLabel}
+        rowLabel={resolvedLabels.rowLabel}
+        rowsPerPageLabel={resolvedLabels.rowsPerPageLabel}
       />
       {isPending ? (
         <p className="mt-2 text-sm text-muted-foreground">
-          {labels?.updatingMessage ?? "Updating..."}
+          {resolvedLabels.updatingMessage}
         </p>
       ) : null}
     </div>

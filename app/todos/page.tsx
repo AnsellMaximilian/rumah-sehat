@@ -55,7 +55,10 @@ export default async function Page(
           defaultSortBy: "id",
         }}
         labels={{
-          rowLabel: "todo(s)",
+          resourceName: {
+            singular: "todo",
+            plural: "todos",
+          },
           updatingMessage: "Updating todos...",
         }}
       />
