@@ -6,6 +6,7 @@ import {
 import { columns } from "./components/columns";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { normalizePositiveInt } from "@/lib/utils";
+import PageSection from "@/components/layout/page-section";
 
 type TodoPageSearchParams = Promise<{
   page?: string | string[];
@@ -50,8 +51,13 @@ export default async function Page(props: {
   });
 
   return (
-    <main className="p-4">
-      <h1>Todos</h1>
+    <PageSection
+      title="Todos"
+      breadcrumbItems={[
+        { label: "Dashboard", href: "/dashboard" },
+        { label: "Todos" },
+      ]}
+    >
       <DataTable
         columns={columns}
         data={todos.data}
@@ -73,6 +79,6 @@ export default async function Page(props: {
           updatingMessage: "Updating todos...",
         }}
       />
-    </main>
+    </PageSection>
   );
 }
