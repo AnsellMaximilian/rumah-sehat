@@ -64,10 +64,14 @@ export const columns: ColumnDef<Todo>[] = [
       return (
         <ButtonGroup>
           <Button asChild size="sm" variant="outline">
-            <Link href={getDataTableEditHref("/todos", todo.id)}>Edit</Link>
+            <Link href={getDataTableEditHref("/dashboard/todos", todo.id)}>
+              Edit
+            </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href={getDataTableDetailHref("/todos", todo.id)}>View</Link>
+            <Link href={getDataTableDetailHref("/dashboard/todos", todo.id)}>
+              View
+            </Link>
           </Button>
           <Button
             size="sm"

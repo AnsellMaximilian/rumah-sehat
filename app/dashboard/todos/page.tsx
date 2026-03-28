@@ -1,5 +1,8 @@
 import { getTodosService } from "@/modules/todos/todo.service";
-import { TodoSortBySchema, TodoSortOrderSchema } from "@/modules/todos/todo.schemas";
+import {
+  TodoSortBySchema,
+  TodoSortOrderSchema,
+} from "@/modules/todos/todo.schemas";
 import { columns } from "./components/columns";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { normalizePositiveInt } from "@/lib/utils";
@@ -16,17 +19,25 @@ function getSingleSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export default async function Page(
-  props: {
-    searchParams?: TodoPageSearchParams;
-  }
-) {
+export default async function Page(props: {
+  searchParams?: TodoPageSearchParams;
+}) {
   const searchParams = await props.searchParams;
   const query = getSingleSearchParam(searchParams?.query)?.trim() ?? "";
-  const currentPage = normalizePositiveInt(getSingleSearchParam(searchParams?.page), 1);
-  const limit = normalizePositiveInt(getSingleSearchParam(searchParams?.limit), 10);
-  const parsedSortBy = TodoSortBySchema.safeParse(getSingleSearchParam(searchParams?.sortBy));
-  const parsedSortOrder = TodoSortOrderSchema.safeParse(getSingleSearchParam(searchParams?.sortOrder));
+  const currentPage = normalizePositiveInt(
+    getSingleSearchParam(searchParams?.page),
+    1,
+  );
+  const limit = normalizePositiveInt(
+    getSingleSearchParam(searchParams?.limit),
+    10,
+  );
+  const parsedSortBy = TodoSortBySchema.safeParse(
+    getSingleSearchParam(searchParams?.sortBy),
+  );
+  const parsedSortOrder = TodoSortOrderSchema.safeParse(
+    getSingleSearchParam(searchParams?.sortOrder),
+  );
   const sortBy = parsedSortBy.success ? parsedSortBy.data : "id";
   const sortOrder = parsedSortOrder.success ? parsedSortOrder.data : "desc";
 
@@ -36,7 +47,7 @@ export default async function Page(
     query,
     sortBy,
     sortOrder,
-  })
+  });
 
   return (
     <main className="p-4">
@@ -63,5 +74,5 @@ export default async function Page(
         }}
       />
     </main>
-  )
+  );
 }
