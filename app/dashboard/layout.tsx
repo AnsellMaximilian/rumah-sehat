@@ -8,7 +8,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-svh bg-background">
       <DashboardShell />
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1 p-4">{children}</main>
     </div>
   );
 }

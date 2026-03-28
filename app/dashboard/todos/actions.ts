@@ -7,26 +7,42 @@ import {
   toggleTodoService,
 } from "@/modules/todos/todo.service";
 import { CreateTodoSchema } from "@/modules/todos/todo.schemas";
-import { treeifyError } from "zod/v4/core";
+import { z, treeifyError } from "zod";
 import { redirect } from "next/navigation";
 
-export type TodoState = {
-  errors: Record<string, string[]>;
-  message: string;
-  success: boolean;
+type TodoValues = z.infer<typeof CreateTodoSchema>;
+
+type TreeifiedFieldErrors<T> = {
+  [K in keyof T]?: {
+    errors: string[];
+  };
 };
 
-export async function createTodoAction(formData: FormData) {
-  const validatedFields = CreateTodoSchema.safeParse({
-    title: formData.get("title"),
-    text: formData.get("text"),
-  });
+export type TodoState = {
+  errors: TreeifiedFieldErrors<TodoValues>;
+
+  message: string;
+  values: {
+    title: string;
+    text?: string;
+  };
+};
+
+export async function createTodoAction(
+  prevState: TodoState,
+  formData: FormData,
+): Promise<TodoState> {
+  const values = {
+    title: String(formData.get("title") ?? ""),
+    text: String(formData.get("text") ?? ""),
+  };
+  const validatedFields = CreateTodoSchema.safeParse(values);
 
   if (!validatedFields.success) {
     return {
-      success: false,
-      errors: treeifyError(validatedFields.error),
+      errors: treeifyError(validatedFields.error).properties || {},
       message: "Validation failed",
+      values,
     };
   }
 
@@ -37,13 +53,14 @@ export async function createTodoAction(formData: FormData) {
   } catch (error) {
     console.error(error);
     return {
-      success: false,
+      errors: {},
       message: "Failed to create todo",
+      values,
     };
   }
 
-  revalidatePath("/todos");
-  redirect("/todos");
+  revalidatePath("/dashboard/todos");
+  redirect("/dashboard/todos");
 }
 
 export async function toggleTodoAction(id: number) {
@@ -52,20 +69,17 @@ export async function toggleTodoAction(id: number) {
   } catch (error) {
     console.error(error);
     return {
-      success: false,
       message: "Failed to toggle todo",
     };
   }
 
-  revalidatePath("/todos");
+  revalidatePath("/dashboard/todos");
 }
 
 export async function deleteTodoAction(id: number) {
   try {
     await deleteTodoService({ id });
-    revalidatePath("/todos");
-
-    return { success: true };
+    revalidatePath("/dashboard/todos");
   } catch (error) {
     console.error(error);
     return { success: false, message: "Failed to delete todo" };

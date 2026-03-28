@@ -1,5 +1,10 @@
-import React from "react";
+import CreateForm from "../components/create-form";
 
 export default async function Page() {
-  return <div>Add Todo</div>;
+  return (
+    <div className="">
+      <h1 className="text-2xl font-bold">Add Todo</h1>
+      <CreateForm />
+    </div>
+  );
 }
