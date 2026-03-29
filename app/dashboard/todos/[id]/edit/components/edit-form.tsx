@@ -1,27 +1,29 @@
 "use client";
 
+import { Todo } from "@/modules/todos/todo.types";
+import { TodoState, updateTodoAction } from "../../../actions";
 import { useActionState } from "react";
-import { createTodoAction, TodoState } from "../actions";
 import { Input } from "@/components/ui/input";
+import FormError from "@/components/forms/form-error";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import FormError from "@/components/forms/form-error";
 
-export default function CreateForm() {
+export default function EditForm({ todo }: { todo: Todo }) {
   const initialState: TodoState = {
     errors: {},
     message: "",
     values: {
-      title: "",
-      text: "",
+      title: todo.title,
+      text: todo.text ?? "",
     },
   };
+  const updateWithId = updateTodoAction.bind(null, todo.id);
+
   const [state, formAction, pending] = useActionState(
-    createTodoAction,
+    updateWithId,
     initialState,
   );
-
   return (
     <form action={formAction}>
       <div>
@@ -73,7 +75,7 @@ export default function CreateForm() {
           Cancel
         </Link>
         <Button type="submit" disabled={pending}>
-          Create Todo
+          Update Todo
         </Button>
       </div>
     </form>

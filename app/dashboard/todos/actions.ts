@@ -5,6 +5,7 @@ import {
   createTodoService,
   deleteTodoService,
   toggleTodoService,
+  updateTodoService,
 } from "@/modules/todos/todo.service";
 import { CreateTodoSchema } from "@/modules/todos/todo.schemas";
 import { z, treeifyError } from "zod";
@@ -55,6 +56,42 @@ export async function createTodoAction(
     return {
       errors: {},
       message: "Failed to create todo",
+      values,
+    };
+  }
+
+  revalidatePath("/dashboard/todos");
+  redirect("/dashboard/todos");
+}
+
+export async function updateTodoAction(
+  id: number,
+  prevState: TodoState,
+  formData: FormData,
+): Promise<TodoState> {
+  const values = {
+    title: String(formData.get("title") ?? ""),
+    text: String(formData.get("text") ?? ""),
+  };
+  const validatedFields = CreateTodoSchema.safeParse(values);
+
+  if (!validatedFields.success) {
+    return {
+      errors: treeifyError(validatedFields.error).properties || {},
+      message: "Validation failed",
+      values,
+    };
+  }
+
+  const { title, text } = validatedFields.data;
+
+  try {
+    await updateTodoService({ id, title, text });
+  } catch (error) {
+    console.error(error);
+    return {
+      errors: {},
+      message: "Failed to update todo",
       values,
     };
   }
