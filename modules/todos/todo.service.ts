@@ -9,39 +9,38 @@ import {
 } from "@/modules/todos/todo.repository";
 import {
   TodoSortBySchema,
-  TodoSortOrderSchema,
 } from "@/modules/todos/todo.schemas";
 import {
   Todo,
   TodoListInput,
-  TodoPagination,
 } from "@/modules/todos/todo.types";
-import { normalizePositiveInt } from "@/lib/utils/number";
-
-type PaginatedData<T> = {
-  data: T[];
-  pagination: TodoPagination;
-};
+import { buildPagination, normalizeListSort } from "@/lib/utils";
+import { PaginatedResult } from "@/types";
 
 export async function getTodosService(
   input: TodoListInput = {},
-): Promise<PaginatedData<Todo>> {
-  const parsedSortBy = TodoSortBySchema.safeParse(input.sortBy);
-  const parsedSortOrder = TodoSortOrderSchema.safeParse(input.sortOrder);
-
-  const page = normalizePositiveInt(input?.page, 1);
-  const limit = normalizePositiveInt(input?.limit, 10);
-  const safeLimit = Math.min(limit, 100);
+): Promise<PaginatedResult<Todo>> {
   const query = input.query?.trim() ?? "";
-  const sortBy = parsedSortBy.success ? parsedSortBy.data : "id";
-  const sortOrder = parsedSortOrder.success ? parsedSortOrder.data : "desc";
+  const { sortBy, sortOrder } = normalizeListSort({
+    sortBy: input.sortBy,
+    sortOrder: input.sortOrder,
+    sortBySchema: TodoSortBySchema,
+    defaultSortBy: "id",
+    defaultSortOrder: "desc",
+  });
   const total = await getTodosCount(query);
-  const totalPages = Math.max(1, Math.ceil(total / safeLimit));
-  const safePage = Math.min(page, totalPages);
+  const { page, limit, pagination } = buildPagination({
+    page: input.page,
+    limit: input.limit,
+    total,
+    maxLimit: 100,
+    defaultPage: 1,
+    defaultLimit: 10,
+  });
 
   const data = await getPaginatedTodos({
-    page: safePage,
-    limit: safeLimit,
+    page,
+    limit,
     query,
     sortBy,
     sortOrder,
@@ -49,14 +48,7 @@ export async function getTodosService(
 
   return {
     data,
-    pagination: {
-      page: safePage,
-      limit: safeLimit,
-      total,
-      totalPages,
-      hasNextPage: safePage < totalPages,
-      hasPreviousPage: safePage > 1,
-    },
+    pagination,
   };
 }
 

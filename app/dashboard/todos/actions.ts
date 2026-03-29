@@ -117,6 +117,7 @@ export async function deleteTodoAction(id: number) {
   try {
     await deleteTodoService({ id });
     revalidatePath("/dashboard/todos");
+    return { success: true, message: "Todo deleted" };
   } catch (error) {
     console.error(error);
     return { success: false, message: "Failed to delete todo" };

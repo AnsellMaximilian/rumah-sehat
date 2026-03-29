@@ -1,14 +1,10 @@
 import { getTodosService } from "@/modules/todos/todo.service";
-import {
-  TodoSortBySchema,
-  TodoSortOrderSchema,
-} from "@/modules/todos/todo.schemas";
+import { TodoSortBySchema } from "@/modules/todos/todo.schemas";
 import { columns } from "./components/columns";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import PageSection from "@/components/layout/page-section";
-import { normalizePositiveInt } from "@/lib/utils/number";
 import { ListSearchParams, SearchParamValue } from "@/types";
-import { getSingleSearchParam } from "@/lib/utils";
+import { parseListSearchParams } from "@/lib/utils";
 
 type TodoFilters = {
   completed?: SearchParamValue;
@@ -19,31 +15,14 @@ export default async function Page(props: {
   searchParams?: Promise<TodoSearchParams>;
 }) {
   const searchParams = await props.searchParams;
-  const query = getSingleSearchParam(searchParams?.query)?.trim() ?? "";
-  const currentPage = normalizePositiveInt(
-    getSingleSearchParam(searchParams?.page),
-    1,
-  );
-  const limit = normalizePositiveInt(
-    getSingleSearchParam(searchParams?.limit),
-    10,
-  );
-  const parsedSortBy = TodoSortBySchema.safeParse(
-    getSingleSearchParam(searchParams?.sortBy),
-  );
-  const parsedSortOrder = TodoSortOrderSchema.safeParse(
-    getSingleSearchParam(searchParams?.sortOrder),
-  );
-  const sortBy = parsedSortBy.success ? parsedSortBy.data : "id";
-  const sortOrder = parsedSortOrder.success ? parsedSortOrder.data : "desc";
-
-  const todos = await getTodosService({
-    page: currentPage,
-    limit,
-    query,
-    sortBy,
-    sortOrder,
+  const listInput = parseListSearchParams(searchParams, {
+    sortBySchema: TodoSortBySchema,
+    defaultSortBy: "id",
+    defaultSortOrder: "desc",
+    defaultPage: 1,
+    defaultLimit: 10,
   });
+  const todos = await getTodosService(listInput);
 
   return (
     <PageSection
@@ -57,9 +36,9 @@ export default async function Page(props: {
         columns={columns}
         data={todos.data}
         pagination={todos.pagination}
-        query={query}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
+        query={listInput.query}
+        sortBy={listInput.sortBy}
+        sortOrder={listInput.sortOrder}
         search={{
           placeholder: "Search titles...",
         }}

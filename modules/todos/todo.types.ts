@@ -1,3 +1,5 @@
+import { ListInput, ListSortOrder } from "@/types";
+
 export type Todo = {
   id: number;
   title: string;
@@ -7,24 +9,9 @@ export type Todo = {
 
 export type TodoSortBy = "id" | "title";
 
-export type TodoSortOrder = "asc" | "desc";
+export type TodoSortOrder = ListSortOrder;
 
-export type TodoListInput = {
-  page?: number;
-  limit?: number;
-  query?: string;
-  sortBy?: TodoSortBy;
-  sortOrder?: TodoSortOrder;
-};
-
-export type TodoPagination = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-};
+export type TodoListInput = ListInput<TodoSortBy>;
 
 export type CreateTodoInput = {
   text: string;
