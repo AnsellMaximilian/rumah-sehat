@@ -7,21 +7,16 @@ import { columns } from "./components/columns";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import PageSection from "@/components/layout/page-section";
 import { normalizePositiveInt } from "@/lib/utils/number";
+import { ListSearchParams, SearchParamValue } from "@/types";
+import { getSingleSearchParam } from "@/lib/utils";
 
-type TodoPageSearchParams = Promise<{
-  page?: string | string[];
-  limit?: string | string[];
-  query?: string | string[];
-  sortBy?: string | string[];
-  sortOrder?: string | string[];
-}>;
-
-function getSingleSearchParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
+type TodoFilters = {
+  completed?: SearchParamValue;
+};
+type TodoSearchParams = ListSearchParams<TodoFilters>;
 
 export default async function Page(props: {
-  searchParams?: TodoPageSearchParams;
+  searchParams?: Promise<TodoSearchParams>;
 }) {
   const searchParams = await props.searchParams;
   const query = getSingleSearchParam(searchParams?.query)?.trim() ?? "";
