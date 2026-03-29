@@ -5,8 +5,8 @@ import {
 } from "@/modules/todos/todo.schemas";
 import { columns } from "./components/columns";
 import { DataTable } from "@/components/ui/data-table/data-table";
-import { normalizePositiveInt } from "@/lib/utils";
 import PageSection from "@/components/layout/page-section";
+import { normalizePositiveInt } from "@/lib/utils/number";
 
 type TodoPageSearchParams = Promise<{
   page?: string | string[];

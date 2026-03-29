@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/data-table/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "use-debounce";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/ui";
 
 const DEFAULT_QUERY_PARAM_KEYS: DataTableQueryParamKeys = {
   query: "query",

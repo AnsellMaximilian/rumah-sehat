@@ -1,5 +1,4 @@
 import "server-only";
-import { normalizePositiveInt } from "@/lib/utils";
 import {
   deleteTodo,
   insertTodo,
@@ -17,6 +16,7 @@ import {
   TodoListInput,
   TodoPagination,
 } from "@/modules/todos/todo.types";
+import { normalizePositiveInt } from "@/lib/utils/number";
 
 type PaginatedData<T> = {
   data: T[];
