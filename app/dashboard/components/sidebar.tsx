@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard } from "lucide-react";
+import { ClipboardList, LayoutDashboard, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { signOutAction } from "@/app/dashboard/actions";
 
 export function AppSidebar() {
   return (
@@ -51,9 +52,16 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
-        <p className="px-2 text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
-          Internal tools
-        </p>
+        <form action={signOutAction}>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton type="submit" tooltip="Logout">
+                <LogOut />
+                <span>Logout</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </form>
       </SidebarFooter>
     </Sidebar>
   );

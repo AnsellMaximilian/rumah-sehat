@@ -16,10 +16,13 @@ import {
 } from "@/modules/todos/todo.types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { PaginatedResult } from "@/types";
+import { requireAuthSessionService } from "@/modules/auth/auth.service";
 
 export async function getTodosService(
   input: TodoListInput = {},
 ): Promise<PaginatedResult<Todo>> {
+  await requireAuthSessionService();
+
   const query = input.query?.trim() ?? "";
   const { sortBy, sortOrder } = normalizeListSort({
     sortBy: input.sortBy,
@@ -53,6 +56,7 @@ export async function getTodosService(
 }
 
 export async function getTodoService(input: { id: number }) {
+  await requireAuthSessionService();
   return getTodo(input.id);
 }
 
@@ -60,10 +64,12 @@ export async function createTodoService(input: {
   title: string;
   text?: string;
 }) {
+  await requireAuthSessionService();
   return insertTodo(input.title.trim(), input.text?.trim());
 }
 
 export async function toggleTodoService(input: { id: number }) {
+  await requireAuthSessionService();
   const todo = await getTodo(input.id);
 
   if (!todo) {
@@ -81,6 +87,7 @@ export async function updateTodoService(input: {
   text?: string;
   done?: boolean;
 }) {
+  await requireAuthSessionService();
   const todo = await getTodo(input.id);
 
   if (!todo) {
@@ -94,6 +101,7 @@ export async function updateTodoService(input: {
 }
 
 export async function deleteTodoService(input: { id: number }) {
+  await requireAuthSessionService();
   const todo = await getTodo(input.id);
 
   if (!todo) {
