@@ -26,7 +26,7 @@ export function AppSidebar() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">Dashboard</p>
               <p className="truncate text-xs text-sidebar-foreground/70">
-                Rumah Sehat
+                Some App
               </p>
             </div>
           </div>
