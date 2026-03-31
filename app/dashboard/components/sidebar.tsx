@@ -14,8 +14,21 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { signOutAction } from "@/app/dashboard/actions";
+import { usePathname } from "next/navigation";
+
+const sidebarItems = [
+  {
+    group: "Home",
+    items: [
+      { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+      { label: "Todos", icon: ClipboardList, href: "/dashboard/todos" },
+    ],
+  },
+];
 
 export function AppSidebar() {
+  const pathname = usePathname();
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3 border-b border-sidebar-border">
@@ -35,21 +48,32 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Todos">
-                  <Link href="/dashboard/todos">
-                    <ClipboardList />
-                    <span>Todos</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {sidebarItems.map((group) => (
+          <SidebarGroup key={group.group}>
+            <SidebarGroupContent>
+              <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem
+                    key={item.href}
+                    data-active={pathname === item.href}
+                  >
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.label}
+                      isActive={pathname === item.href}
+                    >
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
         <form action={signOutAction}>
