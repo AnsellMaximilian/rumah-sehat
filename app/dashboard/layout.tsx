@@ -15,7 +15,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-svh bg-background">
-      <DashboardShell />
+      <DashboardShell userName={session.user.name} />
       <main className="min-w-0 flex-1 p-4">{children}</main>
     </div>
   );

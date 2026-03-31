@@ -26,7 +26,7 @@ const sidebarItems = [
   },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ userName }: { userName: string }) {
   const pathname = usePathname();
 
   return (
@@ -38,9 +38,9 @@ export function AppSidebar() {
               <LayoutDashboard className="size-4" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">Dashboard</p>
+              <p className="truncate text-sm font-semibold">App Name</p>
               <p className="truncate text-xs text-sidebar-foreground/70">
-                Some App
+                {userName}
               </p>
             </div>
           </div>
