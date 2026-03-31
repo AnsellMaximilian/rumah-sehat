@@ -7,16 +7,15 @@ import {
   getPaginatedTodos,
   getTodosCount,
 } from "@/modules/todos/todo.repository";
-import {
-  TodoSortBySchema,
-} from "@/modules/todos/todo.schemas";
-import {
-  Todo,
-  TodoListInput,
-} from "@/modules/todos/todo.types";
+import { TodoSortBySchema } from "@/modules/todos/todo.schemas";
+import { Todo, TodoListInput } from "@/modules/todos/todo.types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { PaginatedResult } from "@/types";
-import { requireAuthSessionService } from "@/modules/auth/auth.service";
+import {
+  getAuthContext,
+  requireAuthSessionService,
+} from "@/modules/auth/auth.service";
+import { requirePermission } from "@/modules/auth/authorization.service";
 
 export async function getTodosService(
   input: TodoListInput = {},
@@ -87,7 +86,10 @@ export async function updateTodoService(input: {
   text?: string;
   done?: boolean;
 }) {
-  await requireAuthSessionService();
+  const session = await requireAuthSessionService();
+
+  await requirePermission(session.user.id, "update", "todos");
+
   const todo = await getTodo(input.id);
 
   if (!todo) {
@@ -101,7 +103,10 @@ export async function updateTodoService(input: {
 }
 
 export async function deleteTodoService(input: { id: number }) {
-  await requireAuthSessionService();
+  const auth = await getAuthContext();
+
+  await auth.require("delete", "todos");
+
   const todo = await getTodo(input.id);
 
   if (!todo) {

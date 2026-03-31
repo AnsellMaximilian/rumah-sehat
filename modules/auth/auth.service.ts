@@ -10,6 +10,7 @@ import {
   SignInServiceInput,
   SignUpServiceInput,
 } from "@/modules/auth/auth.types";
+import { can, requirePermission } from "@/modules/auth/authorization.service";
 
 export async function getAuthSessionService(): Promise<AuthSession | null> {
   const session = await getAuthSessionRepository();
@@ -65,4 +66,16 @@ export async function signUpService(input: SignUpServiceInput) {
 
 export async function signOutService() {
   return signOutRepository();
+}
+
+export async function getAuthContext() {
+  const session = await requireAuthSessionService();
+
+  return {
+    user: session.user,
+    can: (action: string, resource: string) =>
+      can(session.user.id, action, resource),
+    require: (action: string, resource: string) =>
+      requirePermission(session.user.id, action, resource),
+  };
 }

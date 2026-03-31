@@ -15,6 +15,13 @@
       "when": 1774875037713,
       "tag": "0001_yellow_shiva",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774961999331,
+      "tag": "0002_fine_sersi",
+      "breakpoints": true
     }
   ]
 }
