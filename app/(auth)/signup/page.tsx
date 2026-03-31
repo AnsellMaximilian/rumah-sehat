@@ -13,7 +13,7 @@ export default async function Page() {
   return (
     <AuthShell
       title="Create Account"
-      description="Set up your Rumah Sehat account to access the dashboard."
+      description="Set up your App Name account to access the dashboard."
       altActionLabel="Already have an account?"
       altActionHref="/signin"
       altActionText="Sign in"

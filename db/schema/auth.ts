@@ -91,3 +91,35 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+// AUTHORIZATION
+export const role = pgTable("role", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(), // "admin", "editor", etc
+});
+
+export const permission = pgTable("permission", {
+  id: text("id").primaryKey(),
+  resource: text("resource").notNull(), // "products"
+  action: text("action").notNull(),     // "delete", "edit", etc
+});
+
+export const rolePermission = pgTable("role_permission", {
+  roleId: text("role_id")
+    .references(() => role.id, { onDelete: "cascade" }),
+  permissionId: text("permission_id")
+    .references(() => permission.id, { onDelete: "cascade" }),
+});
+
+export const userRole = pgTable("user_role", {
+  userId: text("user_id")
+    .references(() => user.id, { onDelete: "cascade" }),
+  roleId: text("role_id")
+    .references(() => role.id, { onDelete: "cascade" }),
+});
+
+// Super granularity
+export const userPermission = pgTable("user_permission", {
+  userId: text("user_id"),
+  permissionId: text("permission_id"),
+});

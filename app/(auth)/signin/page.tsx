@@ -13,7 +13,7 @@ export default async function Page() {
   return (
     <AuthShell
       title="Sign In"
-      description="Use your Rumah Sehat account to continue."
+      description="Use your App Name account to continue."
       altActionLabel="Don't have an account?"
       altActionHref="/signup"
       altActionText="Create one"
