@@ -1,5 +1,5 @@
 import { asc, count, desc, eq, ilike } from "drizzle-orm"
-import { todos } from "@/db/schema/todos"
+import { todos } from "@/db/schema"
 import { db } from "@/db/drizzle"
 import { TodoSortBy, TodoSortOrder } from "@/modules/todos/todo.types"
 
