@@ -61,3 +61,14 @@ export const stockCountStatusEnum = pgEnum("stock_count_status", [
   "DRAFT",
   "COMPLETED",
 ]);
+
+// --- SUPPLIER FULFILLMENT ---
+export const supplierFulfillmentEventTypeEnum = pgEnum(
+  "supplier_fulfillment_event_type",
+  [
+    "SUPPLIER_SHORT_SHIP",
+    "DAMAGED_BEFORE_DELIVERY",
+    "LOST_BY_COURIER",
+    "CUSTOMER_REJECTED",
+  ],
+);

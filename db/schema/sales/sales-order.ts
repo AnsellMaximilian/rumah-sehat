@@ -23,6 +23,6 @@ export const salesOrderLine = pgTable("sales_order_line", {
 
   supplierId: text("supplier_id"),
 
-  costPrice: integer("cost_price"),
-  sellPrice: integer("sell_price"),
+  costPrice: integer("cost_price").notNull(),
+  sellPrice: integer("sell_price").notNull(),
 });

@@ -21,6 +21,8 @@ export const deliveryLine = pgTable("delivery_line", {
   productId: text("product_id").notNull(),
 
   attemptedQty: integer("attempted_qty").notNull(),
+
+  billedQty: integer("billed_qty").default(0).notNull(),
 });
 
 export const deliveryLineEvent = pgTable("delivery_line_event", {
