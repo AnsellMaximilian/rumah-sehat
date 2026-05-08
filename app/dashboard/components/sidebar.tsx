@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard, LogOut } from "lucide-react";
+import { ClipboardList, LayoutDashboard, LogOut , User2} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +21,7 @@ const sidebarItems = [
     group: "Home",
     items: [
       { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+      { label: "Customers", icon: User2, href: "/dashboard/customers" },
       { label: "Todos", icon: ClipboardList, href: "/dashboard/todos" },
     ],
   },
