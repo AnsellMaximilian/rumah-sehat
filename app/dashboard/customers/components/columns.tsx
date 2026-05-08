@@ -97,14 +97,18 @@ export const columns: ColumnDef<Customer>[] = [
            <ConfirmationDialog 
           title={`Are you sure you want to delete customer ${customer.customerCode}?`}
           description="This action is permanent"
+          confirmText="Delete"
+          pendingText="Deleting..."
           destructive
           onConfirm={async () => {
               const res = await deleteCustomerAction(customer.id);
 
               if (!res.success) {
                 toast.error(res.message);
-              }else {
+                return false;
+              } else {
                 toast.success(res.message)
+                return true;
               }
             }}
           trigger={
