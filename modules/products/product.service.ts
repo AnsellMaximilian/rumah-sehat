@@ -5,6 +5,7 @@ import { getProductCategory } from "@/modules/product-categories/product-categor
 import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
   deleteProduct,
+  getAllProducts,
   getProduct,
   getProductByCode,
   getProductCount,
@@ -12,7 +13,7 @@ import {
   insertProduct,
   updateProduct,
 } from "./product.repository";
-import { Product, ProductListInput } from "./product.types";
+import { Product, ProductListInput, ProductSelectOption } from "./product.types";
 import { ProductSortBySchema } from "./product.schema";
 
 type ProductMutationInput = {
@@ -158,6 +159,14 @@ export async function getProductService(input: { id: string }) {
   await auth.require("view", "products");
 
   return getProduct(input.id);
+}
+
+export async function getAllProductsService(): Promise<ProductSelectOption[]> {
+  const auth = await getAuthContext();
+
+  await auth.require("view", "products");
+
+  return getAllProducts();
 }
 
 export async function createProductService(input: ProductMutationInput) {

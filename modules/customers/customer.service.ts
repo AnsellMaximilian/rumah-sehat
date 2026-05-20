@@ -3,7 +3,7 @@ import { Customer, CustomerListInput } from "./customer.types";
 import { getAuthContext} from "@/modules/auth/auth.service"
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { CustomerSortBySchema } from "./customer.schema";
-import { deleteCustomer, getCustomer, getCustomerByCode, getCustomerCount, getPaginatedCustomers, insertCustomer, updateCustomer } from "./customer.repository";
+import { deleteCustomer, getAllCustomers, getCustomer, getCustomerByCode, getCustomerCount, getPaginatedCustomers, insertCustomer, updateCustomer } from "./customer.repository";
 
 type CustomerMutationInput = {
   name: string;
@@ -91,6 +91,14 @@ export async function getCustomerService(input: { id: string }) {
   await auth.require("view", "customers");
 
   return getCustomer(input.id);
+}
+
+export async function getAllCustomersService() {
+  const auth = await getAuthContext();
+
+  await auth.require("view", "customers");
+
+  return getAllCustomers();
 }
 
 export async function createCustomerService(input: CustomerMutationInput) {

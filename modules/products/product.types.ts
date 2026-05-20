@@ -31,6 +31,15 @@ export type Product = {
   updatedAt: Date;
 };
 
+export type ProductSelectOption = {
+  id: string;
+  name: string;
+  productCode: string | null;
+  supplierId: string | null;
+  supplierName: string | null;
+  active: boolean;
+};
+
 export type ProductSortBy =
   | "createdAt"
   | "productCode"

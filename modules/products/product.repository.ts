@@ -151,6 +151,21 @@ export async function getProductByCode(
   return product;
 }
 
+export async function getAllProducts() {
+  return db
+    .select({
+      id: products.id,
+      name: products.name,
+      productCode: products.productCode,
+      supplierId: products.supplierId,
+      supplierName: suppliers.name,
+      active: products.active,
+    })
+    .from(products)
+    .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+    .orderBy(asc(products.name));
+}
+
 export async function insertProduct(input: ProductMutationInput) {
   const [product] = await db.insert(products).values(input).returning();
 

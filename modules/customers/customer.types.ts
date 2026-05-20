@@ -10,6 +10,12 @@ export type Customer = {
   updatedAt: Date;
 };
 
+export type CustomerSelectOption = {
+  id: string;
+  customerCode: string;
+  name: string;
+};
+
 export type CustomerSortBy =
   | "createdAt"
   | "customerCode"
