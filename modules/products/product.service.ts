@@ -1,6 +1,7 @@
 import { PaginatedResult } from "@/types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { getAuthContext } from "@/modules/auth/auth.service";
+import { getProductCategory } from "@/modules/product-categories/product-category.repository";
 import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
   deleteProduct,
@@ -19,6 +20,7 @@ type ProductMutationInput = {
   productCode: string | null;
   description: string | null;
   supplierId: string | null;
+  categoryId: string | null;
   defaultUnit: string | null;
   cost: number;
   price: number;
@@ -39,6 +41,7 @@ function normalizeProductInput(input: ProductMutationInput) {
     productCode: normalizeOptionalText(input.productCode),
     description: normalizeOptionalText(input.description),
     supplierId: normalizeOptionalText(input.supplierId),
+    categoryId: normalizeOptionalText(input.categoryId),
     defaultUnit: normalizeOptionalText(input.defaultUnit),
     cost: input.cost,
     price: input.price,
@@ -84,6 +87,18 @@ async function ensureSupplierExists(supplierId: string | null) {
 
   if (!supplier) {
     throw new Error("Supplier not found");
+  }
+}
+
+async function ensureProductCategoryExists(categoryId: string | null) {
+  if (!categoryId) {
+    return;
+  }
+
+  const productCategory = await getProductCategory(categoryId);
+
+  if (!productCategory) {
+    throw new Error("Category not found");
   }
 }
 
@@ -154,6 +169,7 @@ export async function createProductService(input: ProductMutationInput) {
 
   await ensureUniqueProductCode(normalizedInput.productCode);
   await ensureSupplierExists(normalizedInput.supplierId);
+  await ensureProductCategoryExists(normalizedInput.categoryId);
 
   return insertProduct({
     ...normalizedInput,
@@ -183,6 +199,7 @@ export async function updateProductService(
     input.id,
   );
   await ensureSupplierExists(normalizedInput.supplierId);
+  await ensureProductCategoryExists(normalizedInput.categoryId);
 
   return updateProduct(input.id, {
     ...normalizedInput,

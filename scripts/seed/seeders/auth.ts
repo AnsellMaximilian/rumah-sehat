@@ -15,6 +15,7 @@ const resources = [
   "users",
   "customers",
   "suppliers",
+  "product_categories",
   "products",
   // "orders",
   // "deliveries",
@@ -49,6 +50,7 @@ const roleDefinitions = {
     const salesResources = new Set([
       "customers",
       "suppliers",
+      "product_categories",
       "products",
       // "orders",
       // "deliveries",

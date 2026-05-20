@@ -1,9 +1,13 @@
 import PageSection from "@/components/layout/page-section";
+import { getAllProductCategoriesService } from "@/modules/product-categories/product-category.service";
 import { getAllSuppliersService } from "@/modules/suppliers/supplier.service";
 import CreateForm from "../components/create-form";
 
 export default async function Page() {
-  const suppliers = await getAllSuppliersService();
+  const [suppliers, categories] = await Promise.all([
+    getAllSuppliersService(),
+    getAllProductCategoriesService(),
+  ]);
 
   return (
     <PageSection
@@ -14,7 +18,7 @@ export default async function Page() {
         { label: "Add Product" },
       ]}
     >
-      <CreateForm suppliers={suppliers} />
+      <CreateForm categories={categories} suppliers={suppliers} />
     </PageSection>
   );
 }

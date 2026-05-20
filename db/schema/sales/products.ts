@@ -7,6 +7,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { productCategories } from "./product-categories";
 import { suppliers } from "./suppliers";
 
 export const products = pgTable("products", {
@@ -15,6 +16,9 @@ export const products = pgTable("products", {
   productCode: varchar("product_code", { length: 32 }).unique(),
   description: text("description"),
   supplierId: uuid("supplier_id").references(() => suppliers.id, {
+    onDelete: "set null",
+  }),
+  categoryId: uuid("category_id").references(() => productCategories.id, {
     onDelete: "set null",
   }),
   defaultUnit: varchar("default_unit", { length: 32 }),

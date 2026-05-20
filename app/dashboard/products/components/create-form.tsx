@@ -8,12 +8,15 @@ import {
   createProductAction,
   ProductState,
 } from "@/app/dashboard/products/actions";
+import { ProductCategorySelectOption } from "@/modules/product-categories/product-category.types";
 import ProductFormFields from "@/app/dashboard/products/components/product-form-fields";
 import { SupplierSelectOption } from "@/modules/suppliers/supplier.types";
 
 export default function CreateForm({
+  categories,
   suppliers,
 }: {
+  categories: ProductCategorySelectOption[];
   suppliers: SupplierSelectOption[];
 }) {
   const initialState: ProductState = {
@@ -24,6 +27,7 @@ export default function CreateForm({
       productCode: "",
       description: "",
       supplierId: "",
+      categoryId: "",
       defaultUnit: "",
       cost: "",
       price: "",
@@ -42,7 +46,11 @@ export default function CreateForm({
       {state.message && state.message !== "Validation failed" ? (
         <FormActionAlert message={state.message} title="Unable to create product" />
       ) : null}
-      <ProductFormFields state={state} suppliers={suppliers} />
+      <ProductFormFields
+        state={state}
+        categories={categories}
+        suppliers={suppliers}
+      />
       <div className="mt-6 flex justify-end gap-4">
         <Link
           href="/dashboard/products"

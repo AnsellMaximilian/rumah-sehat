@@ -36,6 +36,7 @@ export default async function Page({ params }: ProductDetailPageProps) {
             <DetailItem label="Code" value={product.productCode || "-"} />
             <DetailItem label="Name" value={product.name} />
             <DetailItem label="Supplier" value={product.supplierName || "-"} />
+            <DetailItem label="Category" value={product.categoryName || "-"} />
             <DetailItem label="Unit" value={product.defaultUnit || "-"} />
             <DetailItem label="Cost" value={formatRupiah(product.cost)} />
             <DetailItem label="Price" value={formatRupiah(product.price)} />

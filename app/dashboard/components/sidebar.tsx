@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Shapes,
   Truck,
   User2,
 } from "lucide-react";
@@ -30,6 +31,11 @@ const sidebarItems = [
       { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
       { label: "Customers", icon: User2, href: "/dashboard/customers" },
       { label: "Suppliers", icon: Truck, href: "/dashboard/suppliers" },
+      {
+        label: "Categories",
+        icon: Shapes,
+        href: "/dashboard/product-categories",
+      },
       { label: "Products", icon: Package, href: "/dashboard/products" },
       { label: "Todos", icon: ClipboardList, href: "/dashboard/todos" },
     ],

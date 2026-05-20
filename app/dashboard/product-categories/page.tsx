@@ -2,8 +2,8 @@ import PageSection from "@/components/layout/page-section";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { parseListSearchParams } from "@/lib/utils";
 import { ListSearchParams } from "@/types";
-import { ProductSortBySchema } from "@/modules/products/product.schema";
-import { getProductsService } from "@/modules/products/product.service";
+import { ProductCategorySortBySchema } from "@/modules/product-categories/product-category.schema";
+import { getProductCategoriesService } from "@/modules/product-categories/product-category.service";
 import { columns } from "./components/columns";
 
 export default async function Page(props: {
@@ -11,42 +11,42 @@ export default async function Page(props: {
 }) {
   const searchParams = await props.searchParams;
   const listInput = parseListSearchParams(searchParams, {
-    sortBySchema: ProductSortBySchema,
+    sortBySchema: ProductCategorySortBySchema,
     defaultSortBy: "createdAt",
     defaultSortOrder: "desc",
     defaultPage: 1,
     defaultLimit: 10,
   });
 
-  const products = await getProductsService(listInput);
+  const productCategories = await getProductCategoriesService(listInput);
 
   return (
     <PageSection
-      title="Products"
+      title="Product Categories"
       breadcrumbItems={[
         { label: "Dashboard", href: "/dashboard" },
-        { label: "Products" },
+        { label: "Product Categories" },
       ]}
     >
       <DataTable
         columns={columns}
-        data={products.data}
-        pagination={products.pagination}
+        data={productCategories.data}
+        pagination={productCategories.pagination}
         query={listInput.query}
         sortBy={listInput.sortBy}
         sortOrder={listInput.sortOrder}
         search={{
-          placeholder: "Search name, supplier, category, code, description, unit...",
+          placeholder: "Search name or description...",
         }}
         sorting={{
           defaultSortBy: "createdAt",
         }}
         labels={{
           resourceName: {
-            singular: "product",
-            plural: "products",
+            singular: "category",
+            plural: "categories",
           },
-          updatingMessage: "Updating products...",
+          updatingMessage: "Updating categories...",
         }}
       />
     </PageSection>

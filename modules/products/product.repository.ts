@@ -10,7 +10,7 @@ import {
   or,
 } from "drizzle-orm";
 import { db } from "@/db/drizzle";
-import { products, suppliers } from "@/db/schema";
+import { productCategories, products, suppliers } from "@/db/schema";
 import { ProductSortBy, ProductSortOrder } from "./product.types";
 
 type ProductMutationInput = {
@@ -18,6 +18,7 @@ type ProductMutationInput = {
   productCode: string | null;
   description: string | null;
   supplierId: string | null;
+  categoryId: string | null;
   defaultUnit: string | null;
   cost: number;
   price: number;
@@ -53,6 +54,7 @@ function buildProductSearchFilter(query: string) {
     ilike(products.productCode, `%${query}%`),
     ilike(products.description, `%${query}%`),
     ilike(suppliers.name, `%${query}%`),
+    ilike(productCategories.name, `%${query}%`),
     ilike(products.defaultUnit, `%${query}%`),
   );
 }
@@ -73,17 +75,21 @@ export async function getPaginatedProducts(input: {
         .select({
           ...productColumns,
           supplierName: suppliers.name,
+          categoryName: productCategories.name,
         })
         .from(products)
         .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+        .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
         .where(filter)
     : db
         .select({
           ...productColumns,
           supplierName: suppliers.name,
+          categoryName: productCategories.name,
         })
         .from(products)
-        .leftJoin(suppliers, eq(products.supplierId, suppliers.id));
+        .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+        .leftJoin(productCategories, eq(products.categoryId, productCategories.id));
 
   return baseQuery
     .orderBy(getProductOrderBy(sortBy, sortOrder))
@@ -98,11 +104,13 @@ export async function getProductCount(query: string) {
         .select({ count: count() })
         .from(products)
         .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+        .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
         .where(filter)
     : db
         .select({ count: count() })
         .from(products)
-        .leftJoin(suppliers, eq(products.supplierId, suppliers.id));
+        .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+        .leftJoin(productCategories, eq(products.categoryId, productCategories.id));
   const [{ count: countResult }] = await baseQuery;
 
   return countResult;
@@ -114,9 +122,11 @@ export async function getProduct(id: string) {
     .select({
       ...productColumns,
       supplierName: suppliers.name,
+      categoryName: productCategories.name,
     })
     .from(products)
     .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+    .leftJoin(productCategories, eq(products.categoryId, productCategories.id))
     .where(eq(products.id, id));
 
   return product;
@@ -157,6 +167,7 @@ export async function updateProduct(
   if (input.productCode !== undefined) updateData.productCode = input.productCode;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.supplierId !== undefined) updateData.supplierId = input.supplierId;
+  if (input.categoryId !== undefined) updateData.categoryId = input.categoryId;
   if (input.defaultUnit !== undefined) updateData.defaultUnit = input.defaultUnit;
   if (input.cost !== undefined) updateData.cost = input.cost;
   if (input.price !== undefined) updateData.price = input.price;

@@ -2,6 +2,7 @@ import FormError from "@/components/forms/form-error";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductState } from "@/app/dashboard/products/actions";
+import { ProductCategorySelectOption } from "@/modules/product-categories/product-category.types";
 import { PRODUCT_FULFILLMENT_MODES } from "@/modules/products/product.types";
 import { SupplierSelectOption } from "@/modules/suppliers/supplier.types";
 
@@ -18,9 +19,11 @@ const FULFILLMENT_MODE_LABELS: Record<
 
 export default function ProductFormFields({
   state,
+  categories,
   suppliers,
 }: {
   state: ProductState;
+  categories: ProductCategorySelectOption[];
   suppliers: SupplierSelectOption[];
 }) {
   return (
@@ -80,6 +83,31 @@ export default function ProductFormFields({
         <FormError
           errorField={state.errors?.supplierId?.errors}
           errorId="supplierId-error"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="categoryId" className="mb-2 block text-sm font-medium">
+          Category <span className="text-muted-foreground">(optional)</span>
+        </label>
+        <select
+          id="categoryId"
+          name="categoryId"
+          className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+          defaultValue={state.values.categoryId}
+          aria-describedby="categoryId-error"
+        >
+          <option value="">No category</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+              {!category.active ? " (inactive)" : ""}
+            </option>
+          ))}
+        </select>
+        <FormError
+          errorField={state.errors?.categoryId?.errors}
+          errorId="categoryId-error"
         />
       </div>
 

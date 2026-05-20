@@ -13,11 +13,10 @@ import {
 } from "@/components/ui/data-table/utils";
 import ConfirmationDialog from "@/components/dialogs/confirmation-dialog";
 import { toast } from "sonner";
-import { deleteProductAction } from "../actions";
-import { Product } from "@/modules/products/product.types";
-import { formatRupiah } from "@/lib/utils";
+import { deleteProductCategoryAction } from "../actions";
+import { ProductCategory } from "@/modules/product-categories/product-category.types";
 
-export const columns: ColumnDef<Product>[] = [
+export const columns: ColumnDef<ProductCategory>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -41,61 +40,16 @@ export const columns: ColumnDef<Product>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "productCode",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Code" />
-    ),
-    cell: ({ row }) => row.original.productCode || "-",
-  },
-  {
     accessorKey: "name",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Name" />
     ),
   },
   {
-    accessorKey: "supplierName",
-    header: "Supplier",
+    accessorKey: "description",
+    header: "Description",
     enableSorting: false,
-    cell: ({ row }) => row.original.supplierName || "-",
-  },
-  {
-    accessorKey: "categoryName",
-    header: "Category",
-    enableSorting: false,
-    cell: ({ row }) => row.original.categoryName || "-",
-  },
-  {
-    accessorKey: "defaultUnit",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Unit" />
-    ),
-    cell: ({ row }) => row.original.defaultUnit || "-",
-  },
-  {
-    accessorKey: "cost",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Cost" />
-    ),
-    cell: ({ row }) => formatRupiah(row.original.cost),
-  },
-  {
-    accessorKey: "price",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Price" />
-    ),
-    cell: ({ row }) => formatRupiah(row.original.price),
-  },
-  {
-    accessorKey: "defaultFulfillmentMode",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Fulfillment" />
-    ),
-    cell: ({ row }) => (
-      <Badge variant="outline">
-        {row.original.defaultFulfillmentMode.replaceAll("_", " ")}
-      </Badge>
-    ),
+    cell: ({ row }) => row.original.description || "-",
   },
   {
     accessorKey: "active",
@@ -113,28 +67,38 @@ export const columns: ColumnDef<Product>[] = [
     header: "Actions",
     enableSorting: false,
     cell: ({ row }) => {
-      const product = row.original;
+      const productCategory = row.original;
 
       return (
         <ButtonGroup>
           <Button asChild size="sm" variant="outline">
-            <Link href={getDataTableEditHref("/dashboard/products", product.id)}>
+            <Link
+              href={getDataTableEditHref(
+                "/dashboard/product-categories",
+                productCategory.id,
+              )}
+            >
               Edit
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href={getDataTableDetailHref("/dashboard/products", product.id)}>
+            <Link
+              href={getDataTableDetailHref(
+                "/dashboard/product-categories",
+                productCategory.id,
+              )}
+            >
               View
             </Link>
           </Button>
           <ConfirmationDialog
-            title={`Are you sure you want to delete product ${product.name}?`}
+            title={`Are you sure you want to delete category ${productCategory.name}?`}
             description="This action is permanent"
             confirmText="Delete"
             pendingText="Deleting..."
             destructive
             onConfirm={async () => {
-              const res = await deleteProductAction(product.id);
+              const res = await deleteProductCategoryAction(productCategory.id);
 
               if (!res.success) {
                 toast.error(res.message);

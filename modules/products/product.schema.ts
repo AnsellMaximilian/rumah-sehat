@@ -52,6 +52,17 @@ const ProductBaseSchema = z.object({
     },
     z.union([z.string().uuid("Supplier is invalid"), z.null()]),
   ),
+  categoryId: z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized || null;
+      }
+
+      return value;
+    },
+    z.union([z.string().uuid("Category is invalid"), z.null()]),
+  ),
   defaultUnit: nullableText(32, "Default unit"),
   cost: requiredWholeNumber("Cost"),
   price: requiredWholeNumber("Price"),

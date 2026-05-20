@@ -18,6 +18,8 @@ export type Product = {
   description: string | null;
   supplierId: string | null;
   supplierName: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
   defaultUnit: string | null;
   cost: number;
   price: number;
