@@ -14,13 +14,13 @@ const resources = [
   "todos",
   "users",
   "customers",
+  "products",
   // "orders",
   // "deliveries",
   // "delivery_charges",
   // "invoices",
   // "currencies",
   // "items",
-  // "products",
   // "stock_movements",
   // "stock_receipts",
   // "exchange_rates",
@@ -47,11 +47,11 @@ const roleDefinitions = {
   sales: buildPermissionsData().filter(({ resource, action }) => {
     const salesResources = new Set([
       "customers",
+      "products",
       // "orders",
       // "deliveries",
       // "delivery_charges",
       // "invoices",
-      // "products",
       // "discount_policies",
     ]);
 
