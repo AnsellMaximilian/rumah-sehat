@@ -45,20 +45,21 @@ function nullableWholeNumber(label: string) {
   );
 }
 
-const SupplierPurchaseItemSchema = z
-  .object({
-    productId: z.string().uuid("Product is required"),
-    quantity: z
-      .coerce.number()
-      .positive("Quantity must be greater than 0"),
-    unitCost: nullableWholeNumber("Unit cost"),
-    destinationType: z.enum(SUPPLIER_PURCHASE_DESTINATION_TYPES, {
-      error: () => ({ message: "Destination type is required" }),
-    }),
-    customerId: nullableUuid("Customer"),
-    notes: nullableText(500, "Item notes"),
-  })
-  .superRefine((value, ctx) => {
+const SupplierPurchaseItemObjectSchema = z.object({
+  productId: z.string().uuid("Product is required"),
+  quantity: z
+    .coerce.number()
+    .positive("Quantity must be greater than 0"),
+  unitCost: nullableWholeNumber("Unit cost"),
+  destinationType: z.enum(SUPPLIER_PURCHASE_DESTINATION_TYPES, {
+    error: () => ({ message: "Destination type is required" }),
+  }),
+  customerId: nullableUuid("Customer"),
+  notes: nullableText(500, "Item notes"),
+});
+
+const SupplierPurchaseItemSchema = SupplierPurchaseItemObjectSchema.superRefine(
+  (value, ctx) => {
     const needsCustomer =
       value.destinationType === "customer_direct" ||
       value.destinationType === "customer_prepacked";
@@ -70,7 +71,8 @@ const SupplierPurchaseItemSchema = z
         message: "Customer is required for this destination",
       });
     }
-  });
+  },
+);
 
 const SupplierPurchaseBaseSchema = z.object({
   supplierId: z.string().uuid("Supplier is required"),
@@ -90,7 +92,14 @@ const SupplierPurchaseBaseSchema = z.object({
 
 export const CreateSupplierPurchaseSchema = SupplierPurchaseBaseSchema;
 
-export const UpdateSupplierPurchaseSchema = CreateSupplierPurchaseSchema.partial();
+export const UpdateSupplierPurchaseSchema = z.object({
+  supplierId: SupplierPurchaseBaseSchema.shape.supplierId.optional(),
+  purchaseDate: SupplierPurchaseBaseSchema.shape.purchaseDate.optional(),
+  referenceNumber: SupplierPurchaseBaseSchema.shape.referenceNumber.optional(),
+  status: SupplierPurchaseBaseSchema.shape.status.optional(),
+  notes: SupplierPurchaseBaseSchema.shape.notes.optional(),
+  items: z.array(SupplierPurchaseItemObjectSchema).optional(),
+});
 
 export const SupplierPurchaseSortBySchema = z.enum([
   "createdAt",
