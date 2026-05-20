@@ -1,6 +1,7 @@
 import { PaginatedResult } from "@/types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { getAuthContext } from "@/modules/auth/auth.service";
+import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
   deleteProduct,
   getProduct,
@@ -17,6 +18,7 @@ type ProductMutationInput = {
   name: string;
   productCode: string | null;
   description: string | null;
+  supplierId: string | null;
   defaultUnit: string | null;
   cost: number;
   price: number;
@@ -36,6 +38,7 @@ function normalizeProductInput(input: ProductMutationInput) {
     name: input.name.trim(),
     productCode: normalizeOptionalText(input.productCode),
     description: normalizeOptionalText(input.description),
+    supplierId: normalizeOptionalText(input.supplierId),
     defaultUnit: normalizeOptionalText(input.defaultUnit),
     cost: input.cost,
     price: input.price,
@@ -69,6 +72,18 @@ async function ensureUniqueProductCodeForUpdate(
 
   if (duplicateProduct) {
     throw new Error("Product code already exists");
+  }
+}
+
+async function ensureSupplierExists(supplierId: string | null) {
+  if (!supplierId) {
+    return;
+  }
+
+  const supplier = await getSupplier(supplierId);
+
+  if (!supplier) {
+    throw new Error("Supplier not found");
   }
 }
 
@@ -138,6 +153,7 @@ export async function createProductService(input: ProductMutationInput) {
   const normalizedInput = normalizeProductInput(input);
 
   await ensureUniqueProductCode(normalizedInput.productCode);
+  await ensureSupplierExists(normalizedInput.supplierId);
 
   return insertProduct({
     ...normalizedInput,
@@ -166,6 +182,7 @@ export async function updateProductService(
     normalizedInput.productCode,
     input.id,
   );
+  await ensureSupplierExists(normalizedInput.supplierId);
 
   return updateProduct(input.id, {
     ...normalizedInput,

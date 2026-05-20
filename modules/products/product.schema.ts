@@ -41,6 +41,17 @@ const ProductBaseSchema = z.object({
     .max(255, "Product name must be less than 255 characters"),
   productCode: nullableText(32, "Product code"),
   description: nullableText(1000, "Description"),
+  supplierId: z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized || null;
+      }
+
+      return value;
+    },
+    z.union([z.string().uuid("Supplier is invalid"), z.null()]),
+  ),
   defaultUnit: nullableText(32, "Default unit"),
   cost: requiredWholeNumber("Cost"),
   price: requiredWholeNumber("Price"),

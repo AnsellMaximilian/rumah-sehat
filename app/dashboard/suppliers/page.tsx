@@ -2,8 +2,8 @@ import PageSection from "@/components/layout/page-section";
 import { DataTable } from "@/components/ui/data-table/data-table";
 import { parseListSearchParams } from "@/lib/utils";
 import { ListSearchParams } from "@/types";
-import { ProductSortBySchema } from "@/modules/products/product.schema";
-import { getProductsService } from "@/modules/products/product.service";
+import { SupplierSortBySchema } from "@/modules/suppliers/supplier.schema";
+import { getSuppliersService } from "@/modules/suppliers/supplier.service";
 import { columns } from "./components/columns";
 
 export default async function Page(props: {
@@ -11,42 +11,42 @@ export default async function Page(props: {
 }) {
   const searchParams = await props.searchParams;
   const listInput = parseListSearchParams(searchParams, {
-    sortBySchema: ProductSortBySchema,
+    sortBySchema: SupplierSortBySchema,
     defaultSortBy: "createdAt",
     defaultSortOrder: "desc",
     defaultPage: 1,
     defaultLimit: 10,
   });
 
-  const products = await getProductsService(listInput);
+  const suppliers = await getSuppliersService(listInput);
 
   return (
     <PageSection
-      title="Products"
+      title="Suppliers"
       breadcrumbItems={[
         { label: "Dashboard", href: "/dashboard" },
-        { label: "Products" },
+        { label: "Suppliers" },
       ]}
     >
       <DataTable
         columns={columns}
-        data={products.data}
-        pagination={products.pagination}
+        data={suppliers.data}
+        pagination={suppliers.pagination}
         query={listInput.query}
         sortBy={listInput.sortBy}
         sortOrder={listInput.sortOrder}
         search={{
-          placeholder: "Search name, supplier, code, description, unit...",
+          placeholder: "Search name, code, contact, bank...",
         }}
         sorting={{
           defaultSortBy: "createdAt",
         }}
         labels={{
           resourceName: {
-            singular: "product",
-            plural: "products",
+            singular: "supplier",
+            plural: "suppliers",
           },
-          updatingMessage: "Updating products...",
+          updatingMessage: "Updating suppliers...",
         }}
       />
     </PageSection>

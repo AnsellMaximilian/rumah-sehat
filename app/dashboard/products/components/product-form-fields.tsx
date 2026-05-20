@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductState } from "@/app/dashboard/products/actions";
 import { PRODUCT_FULFILLMENT_MODES } from "@/modules/products/product.types";
+import { SupplierSelectOption } from "@/modules/suppliers/supplier.types";
 
 const FULFILLMENT_MODE_LABELS: Record<
   (typeof PRODUCT_FULFILLMENT_MODES)[number],
@@ -17,8 +18,10 @@ const FULFILLMENT_MODE_LABELS: Record<
 
 export default function ProductFormFields({
   state,
+  suppliers,
 }: {
   state: ProductState;
+  suppliers: SupplierSelectOption[];
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -50,6 +53,33 @@ export default function ProductFormFields({
         <FormError
           errorField={state.errors?.productCode?.errors}
           errorId="productCode-error"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="supplierId" className="mb-2 block text-sm font-medium">
+          Supplier <span className="text-muted-foreground">(optional)</span>
+        </label>
+        <select
+          id="supplierId"
+          name="supplierId"
+          className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+          defaultValue={state.values.supplierId}
+          aria-describedby="supplierId-error"
+        >
+          <option value="">No supplier</option>
+          {suppliers.map((supplier) => (
+            <option key={supplier.id} value={supplier.id}>
+              {supplier.supplierCode
+                ? `${supplier.supplierCode} - ${supplier.name}`
+                : supplier.name}
+              {!supplier.active ? " (inactive)" : ""}
+            </option>
+          ))}
+        </select>
+        <FormError
+          errorField={state.errors?.supplierId?.errors}
+          errorId="supplierId-error"
         />
       </div>
 

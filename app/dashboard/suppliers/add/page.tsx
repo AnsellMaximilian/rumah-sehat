@@ -1,20 +1,17 @@
 import PageSection from "@/components/layout/page-section";
-import { getAllSuppliersService } from "@/modules/suppliers/supplier.service";
 import CreateForm from "../components/create-form";
 
 export default async function Page() {
-  const suppliers = await getAllSuppliersService();
-
   return (
     <PageSection
-      title="Add Product"
+      title="Add Supplier"
       breadcrumbItems={[
         { label: "Dashboard", href: "/dashboard" },
-        { label: "Products", href: "/dashboard/products" },
-        { label: "Add Product" },
+        { label: "Suppliers", href: "/dashboard/suppliers" },
+        { label: "Add Supplier" },
       ]}
     >
-      <CreateForm suppliers={suppliers} />
+      <CreateForm />
     </PageSection>
   );
 }

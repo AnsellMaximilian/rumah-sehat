@@ -14,6 +14,7 @@ const resources = [
   "todos",
   "users",
   "customers",
+  "suppliers",
   "products",
   // "orders",
   // "deliveries",
@@ -47,6 +48,7 @@ const roleDefinitions = {
   sales: buildPermissionsData().filter(({ resource, action }) => {
     const salesResources = new Set([
       "customers",
+      "suppliers",
       "products",
       // "orders",
       // "deliveries",

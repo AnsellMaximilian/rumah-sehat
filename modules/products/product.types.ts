@@ -16,6 +16,8 @@ export type Product = {
   name: string;
   productCode: string | null;
   description: string | null;
+  supplierId: string | null;
+  supplierName: string | null;
   defaultUnit: string | null;
   cost: number;
   price: number;

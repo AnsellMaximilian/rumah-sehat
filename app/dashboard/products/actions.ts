@@ -20,6 +20,7 @@ export type ProductFormValues = {
   name: string;
   productCode: string;
   description: string;
+  supplierId: string;
   defaultUnit: string;
   cost: string;
   price: string;
@@ -39,6 +40,7 @@ function getProductValues(formData: FormData): ProductFormValues {
     name: String(formData.get("name") ?? ""),
     productCode: String(formData.get("productCode") ?? ""),
     description: String(formData.get("description") ?? ""),
+    supplierId: String(formData.get("supplierId") ?? ""),
     defaultUnit: String(formData.get("defaultUnit") ?? ""),
     cost: String(formData.get("cost") ?? ""),
     price: String(formData.get("price") ?? ""),

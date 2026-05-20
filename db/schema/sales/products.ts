@@ -2,17 +2,21 @@ import {
   boolean,
   integer,
   pgTable,
+  text,
   timestamp,
   uuid,
   varchar,
-  text,
 } from "drizzle-orm/pg-core";
+import { suppliers } from "./suppliers";
 
 export const products = pgTable("products", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   productCode: varchar("product_code", { length: 32 }).unique(),
   description: text("description"),
+  supplierId: uuid("supplier_id").references(() => suppliers.id, {
+    onDelete: "set null",
+  }),
   defaultUnit: varchar("default_unit", { length: 32 }),
   cost: integer("default_cost_price").notNull(),
   price: integer("default_sell_price").notNull(),

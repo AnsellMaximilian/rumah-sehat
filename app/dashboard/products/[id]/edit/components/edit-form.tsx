@@ -10,8 +10,15 @@ import {
 } from "@/app/dashboard/products/actions";
 import ProductFormFields from "@/app/dashboard/products/components/product-form-fields";
 import { Product } from "@/modules/products/product.types";
+import { SupplierSelectOption } from "@/modules/suppliers/supplier.types";
 
-export default function EditForm({ product }: { product: Product }) {
+export default function EditForm({
+  product,
+  suppliers,
+}: {
+  product: Product;
+  suppliers: SupplierSelectOption[];
+}) {
   const initialState: ProductState = {
     errors: {},
     message: "",
@@ -19,6 +26,7 @@ export default function EditForm({ product }: { product: Product }) {
       name: product.name,
       productCode: product.productCode ?? "",
       description: product.description ?? "",
+      supplierId: product.supplierId ?? "",
       defaultUnit: product.defaultUnit ?? "",
       cost: String(product.cost),
       price: String(product.price),
@@ -39,7 +47,7 @@ export default function EditForm({ product }: { product: Product }) {
       {state.message && state.message !== "Validation failed" ? (
         <FormActionAlert message={state.message} title="Unable to update product" />
       ) : null}
-      <ProductFormFields state={state} />
+      <ProductFormFields state={state} suppliers={suppliers} />
       <div className="mt-6 flex justify-end gap-4">
         <Link
           href="/dashboard/products"

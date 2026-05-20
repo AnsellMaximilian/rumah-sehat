@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import PageSection from "@/components/layout/page-section";
 import { getProductService } from "@/modules/products/product.service";
+import { getAllSuppliersService } from "@/modules/suppliers/supplier.service";
 import EditForm from "./components/edit-form";
 
 interface EditProductPageProps {
@@ -11,7 +12,10 @@ interface EditProductPageProps {
 
 export default async function Page({ params }: EditProductPageProps) {
   const { id } = await params;
-  const product = await getProductService({ id });
+  const [product, suppliers] = await Promise.all([
+    getProductService({ id }),
+    getAllSuppliersService(),
+  ]);
 
   if (!product) {
     notFound();
@@ -26,7 +30,7 @@ export default async function Page({ params }: EditProductPageProps) {
         { label: `Edit ${product.productCode || product.name}` },
       ]}
     >
-      <EditForm product={product} />
+      <EditForm product={product} suppliers={suppliers} />
     </PageSection>
   );
 }
