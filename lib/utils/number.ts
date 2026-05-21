@@ -20,3 +20,9 @@ const rupiahFormatter = new Intl.NumberFormat("id-ID", {
 export function formatRupiah(value: number) {
   return rupiahFormatter.format(value);
 }
+
+export function formatQuantity(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}

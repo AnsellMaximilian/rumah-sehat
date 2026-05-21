@@ -21,6 +21,7 @@ import {
   suppliers,
   user,
 } from "@/db/schema";
+import { syncPurchaseInStockMovements } from "@/modules/stock-movements/stock-movement.repository";
 import {
   SupplierPurchaseSortBy,
   SupplierPurchaseSortOrder,
@@ -393,6 +394,13 @@ export async function insertSupplierPurchase(input: {
       status: input.purchase.status,
       supplierId: input.purchase.supplierId,
     });
+    await syncPurchaseInStockMovements({
+      createdBy: input.purchase.createdBy,
+      items: currentItems,
+      occurredAt: new Date(`${input.purchase.purchaseDate}T00:00:00`),
+      status: input.purchase.status,
+      tx,
+    });
 
     return {
       affectedSalesLineIds: syncResult.affectedSalesLineIds,
@@ -476,6 +484,13 @@ export async function updateSupplierPurchase(
       status: input.purchase.status,
       supplierId: input.purchase.supplierId,
     });
+    await syncPurchaseInStockMovements({
+      createdBy: supplierPurchase?.createdBy ?? "",
+      items: currentItems,
+      occurredAt: new Date(`${input.purchase.purchaseDate}T00:00:00`),
+      status: input.purchase.status,
+      tx,
+    });
 
     return {
       affectedSalesLineIds: syncResult.affectedSalesLineIds,
@@ -487,6 +502,12 @@ export async function updateSupplierPurchase(
 
 export async function deleteSupplierPurchase(id: string): Promise<SupplierPurchaseWriteResult> {
   return db.transaction(async (tx) => {
+    const [existingPurchase] = await tx
+      .select({
+        createdBy: supplierPurchases.createdBy,
+      })
+      .from(supplierPurchases)
+      .where(eq(supplierPurchases.id, id));
     const existingItems = await getRawSupplierPurchaseItems(tx, id);
     const syncResult = await syncGeneratedSalesLines(tx, {
       currentItems: [],
@@ -494,6 +515,15 @@ export async function deleteSupplierPurchase(id: string): Promise<SupplierPurcha
       status: "void",
       supplierId: "",
     });
+    if (existingItems.length > 0) {
+      await syncPurchaseInStockMovements({
+        createdBy: existingPurchase?.createdBy ?? "",
+        items: existingItems,
+        occurredAt: new Date(),
+        status: "void",
+        tx,
+      });
+    }
     const [supplierPurchase] = await tx
       .delete(supplierPurchases)
       .where(eq(supplierPurchases.id, id))

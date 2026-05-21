@@ -26,6 +26,7 @@ export type Product = {
   defaultFulfillmentMode: string;
   trackStock: boolean;
   stockTrackingStartedAt: Date | null;
+  currentStock: number | null;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;

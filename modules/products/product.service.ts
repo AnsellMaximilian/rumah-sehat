@@ -2,6 +2,7 @@ import { PaginatedResult } from "@/types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { getAuthContext } from "@/modules/auth/auth.service";
 import { getProductCategory } from "@/modules/product-categories/product-category.repository";
+import { getProductStockMovements, getProductStockSummaries } from "@/modules/stock-movements/stock-movement.repository";
 import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
   deleteProduct,
@@ -114,6 +115,22 @@ function resolveStockTrackingStartedAt(input: {
   return input.existingStartedAt ?? new Date();
 }
 
+function mergeCurrentStock<T extends { id: string; trackStock: boolean }>(products: T[]) {
+  return async () => {
+    const summaries = await getProductStockSummaries(products.map((product) => product.id));
+    const currentStockByProductId = new Map(
+      summaries.map((summary) => [summary.productId, summary.currentStock]),
+    );
+
+    return products.map((product) => ({
+      ...product,
+      currentStock: product.trackStock
+        ? currentStockByProductId.get(product.id) ?? 0
+        : null,
+    }));
+  };
+}
+
 export async function getProductsService(
   input: ProductListInput = {},
 ): Promise<PaginatedResult<Product>> {
@@ -146,9 +163,10 @@ export async function getProductsService(
     sortBy,
     sortOrder,
   });
+  const dataWithStock = await mergeCurrentStock(data as Product[])();
 
   return {
-    data,
+    data: dataWithStock,
     pagination,
   };
 }
@@ -158,7 +176,18 @@ export async function getProductService(input: { id: string }) {
 
   await auth.require("view", "products");
 
-  return getProduct(input.id);
+  const product = await getProduct(input.id);
+
+  if (!product) {
+    return null;
+  }
+
+  const [summary] = await getProductStockSummaries([product.id]);
+
+  return {
+    ...product,
+    currentStock: product.trackStock ? summary?.currentStock ?? 0 : null,
+  };
 }
 
 export async function getAllProductsService(): Promise<ProductSelectOption[]> {
@@ -167,6 +196,14 @@ export async function getAllProductsService(): Promise<ProductSelectOption[]> {
   await auth.require("view", "products");
 
   return getAllProducts();
+}
+
+export async function getProductStockMovementsService(input: { productId: string }) {
+  const auth = await getAuthContext();
+
+  await auth.require("view", "products");
+
+  return getProductStockMovements(input.productId);
 }
 
 export async function createProductService(input: ProductMutationInput) {

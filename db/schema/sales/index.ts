@@ -4,5 +4,6 @@ export * from "./invoices";
 export * from "./product-categories";
 export * from "./products";
 export * from "./sales-lines";
+export * from "./stock-movements";
 export * from "./suppliers";
 export * from "./supplier-purchases";

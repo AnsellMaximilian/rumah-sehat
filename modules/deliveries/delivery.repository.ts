@@ -20,6 +20,7 @@ import {
   salesLines,
   user,
 } from "@/db/schema";
+import { syncDeliveryOutStockMovements } from "@/modules/stock-movements/stock-movement.repository";
 import { DeliverySortBy, DeliverySortOrder } from "./delivery.types";
 
 type DeliveryMutationInput = {
@@ -371,7 +372,7 @@ export async function insertDelivery(input: {
       items: input.items,
     });
 
-    await tx.insert(deliveryItems).values(
+    const insertedItems = await tx.insert(deliveryItems).values(
       linkedSalesLines.map(({ salesLine, notes }) => {
         return {
           deliveryId: delivery.id,
@@ -383,7 +384,7 @@ export async function insertDelivery(input: {
           notes,
         };
       }),
-    );
+    ).returning();
 
     if (input.delivery.status === "delivered") {
       await setSalesLineStatuses(
@@ -391,6 +392,21 @@ export async function insertDelivery(input: {
         linkedSalesLines.map(({ salesLine }) => salesLine.id),
         "delivered",
       );
+      await syncDeliveryOutStockMovements({
+        createdBy: input.delivery.createdBy,
+        items: insertedItems.map((item) => ({
+          notes: item.notes,
+          occurredAt: input.delivery.deliveredAt ?? input.delivery.recordedAt,
+          productId: item.productId,
+          quantity: item.quantity,
+          salesLineId: item.salesLineId,
+          sourceMode: item.sourceMode,
+        })),
+        sourceSalesLineIds: insertedItems
+          .filter((item) => item.sourceMode === "stock")
+          .map((item) => item.salesLineId),
+        tx,
+      });
     }
 
     return delivery;
@@ -407,6 +423,9 @@ export async function updateDelivery(
   return db.transaction(async (tx) => {
     const [existingDelivery] = await tx
       .select({
+        createdBy: deliveries.createdBy,
+        deliveredAt: deliveries.deliveredAt,
+        recordedAt: deliveries.recordedAt,
         status: deliveries.status,
       })
       .from(deliveries)
@@ -414,8 +433,10 @@ export async function updateDelivery(
 
     const previousItems = await tx
       .select({
+        productId: deliveryItems.productId,
         salesLineId: deliveryItems.salesLineId,
         salesLineSourceDeliveryId: salesLines.sourceDeliveryId,
+        sourceMode: deliveryItems.sourceMode,
       })
       .from(deliveryItems)
       .innerJoin(salesLines, eq(deliveryItems.salesLineId, salesLines.id))
@@ -443,7 +464,7 @@ export async function updateDelivery(
       items: input.items,
     });
 
-    await tx.insert(deliveryItems).values(
+    const insertedItems = await tx.insert(deliveryItems).values(
       linkedSalesLines.map(({ salesLine, notes }) => {
         return {
           deliveryId: id,
@@ -455,7 +476,7 @@ export async function updateDelivery(
           notes,
         };
       }),
-    );
+    ).returning();
 
     const nextSalesLineIds = linkedSalesLines.map(({ salesLine }) => salesLine.id);
     const previousExistingSalesLineIds = previousItems
@@ -484,6 +505,31 @@ export async function updateDelivery(
       );
     }
 
+    await syncDeliveryOutStockMovements({
+      createdBy: existingDelivery?.createdBy ?? "",
+      items: input.delivery.status === "delivered"
+        ? insertedItems.map((item) => ({
+            notes: item.notes,
+            occurredAt: input.delivery.deliveredAt ?? input.delivery.recordedAt,
+            productId: item.productId,
+            quantity: item.quantity,
+            salesLineId: item.salesLineId,
+            sourceMode: item.sourceMode,
+          }))
+        : [],
+      sourceSalesLineIds: Array.from(
+        new Set([
+          ...previousItems
+            .filter((item) => item.sourceMode === "stock")
+            .map((item) => item.salesLineId),
+          ...insertedItems
+            .filter((item) => item.sourceMode === "stock")
+            .map((item) => item.salesLineId),
+        ]),
+      ),
+      tx,
+    });
+
     return delivery;
   });
 }
@@ -492,6 +538,9 @@ export async function softDeleteDelivery(id: string) {
   return db.transaction(async (tx) => {
     const [existingDelivery] = await tx
       .select({
+        createdBy: deliveries.createdBy,
+        deliveredAt: deliveries.deliveredAt,
+        recordedAt: deliveries.recordedAt,
         status: deliveries.status,
       })
       .from(deliveries)
@@ -499,8 +548,10 @@ export async function softDeleteDelivery(id: string) {
 
     const existingItems = await tx
       .select({
+        productId: deliveryItems.productId,
         salesLineId: deliveryItems.salesLineId,
         salesLineSourceDeliveryId: salesLines.sourceDeliveryId,
+        sourceMode: deliveryItems.sourceMode,
       })
       .from(deliveryItems)
       .innerJoin(salesLines, eq(deliveryItems.salesLineId, salesLines.id))
@@ -543,6 +594,15 @@ export async function softDeleteDelivery(id: string) {
     if (sourceCreatedSalesLineIds.length > 0) {
       await softDeleteSalesLines(tx, sourceCreatedSalesLineIds);
     }
+
+    await syncDeliveryOutStockMovements({
+      createdBy: existingDelivery?.createdBy ?? "",
+      items: [],
+      sourceSalesLineIds: existingItems
+        .filter((item) => item.sourceMode === "stock")
+        .map((item) => item.salesLineId),
+      tx,
+    });
 
     return delivery;
   });

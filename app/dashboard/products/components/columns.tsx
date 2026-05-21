@@ -15,7 +15,7 @@ import ConfirmationDialog from "@/components/dialogs/confirmation-dialog";
 import { toast } from "sonner";
 import { deleteProductAction } from "../actions";
 import { Product } from "@/modules/products/product.types";
-import { formatRupiah } from "@/lib/utils";
+import { formatQuantity, formatRupiah } from "@/lib/utils";
 
 export const columns: ColumnDef<Product>[] = [
   {
@@ -96,6 +96,15 @@ export const columns: ColumnDef<Product>[] = [
         {row.original.defaultFulfillmentMode.replaceAll("_", " ")}
       </Badge>
     ),
+  },
+  {
+    id: "currentStock",
+    header: "On Hand",
+    enableSorting: false,
+    cell: ({ row }) =>
+      row.original.trackStock && row.original.currentStock !== null
+        ? formatQuantity(row.original.currentStock)
+        : "-",
   },
   {
     accessorKey: "active",
