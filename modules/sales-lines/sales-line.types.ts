@@ -36,6 +36,20 @@ export type SalesLine = {
   deletedAt: Date | null;
 };
 
+export type SalesLineSelectOption = {
+  id: string;
+  customerId: string;
+  customerCode: string | null;
+  customerName: string | null;
+  productId: string;
+  productCode: string | null;
+  productName: string | null;
+  quantity: number;
+  unitSellPrice: number | null;
+  sourceMode: string;
+  status: string;
+};
+
 export type SalesLineSortBy =
   | "createdAt"
   | "customerName"

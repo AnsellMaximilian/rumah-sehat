@@ -6,6 +6,7 @@ import {
   eq,
   getTableColumns,
   ilike,
+  inArray,
   isNull,
   or,
 } from "drizzle-orm";
@@ -75,6 +76,19 @@ function buildBaseSalesLineQuery() {
     .leftJoin(suppliers, eq(salesLines.supplierId, suppliers.id));
 }
 
+function buildAvailableSalesLineFilter(includeIds: string[]) {
+  const statusFilter = or(
+    eq(salesLines.status, "pending"),
+    eq(salesLines.status, "ready_for_delivery"),
+  );
+
+  if (includeIds.length === 0) {
+    return statusFilter;
+  }
+
+  return or(statusFilter, inArray(salesLines.id, includeIds));
+}
+
 export async function getPaginatedSalesLines(input: {
   page: number;
   limit: number;
@@ -117,6 +131,17 @@ export async function getSalesLine(id: string) {
   );
 
   return salesLine;
+}
+
+export async function getAvailableSalesLines(includeIds: string[] = []) {
+  return buildBaseSalesLineQuery()
+    .where(
+      and(
+        isNull(salesLines.deletedAt),
+        buildAvailableSalesLineFilter(includeIds),
+      ),
+    )
+    .orderBy(asc(customers.customerCode), asc(products.name));
 }
 
 export async function insertSalesLine(input: SalesLineMutationInput) {

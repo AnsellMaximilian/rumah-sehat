@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ClipboardList,
+  HandHelping,
   LayoutDashboard,
   LogOut,
   Package,
@@ -47,6 +48,11 @@ const sidebarItems = [
         label: "Sales Lines",
         icon: ReceiptText,
         href: "/dashboard/sales-lines",
+      },
+      {
+        label: "Deliveries",
+        icon: HandHelping,
+        href: "/dashboard/deliveries",
       },
       { label: "Products", icon: Package, href: "/dashboard/products" },
       { label: "Todos", icon: ClipboardList, href: "/dashboard/todos" },

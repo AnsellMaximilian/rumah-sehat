@@ -5,6 +5,7 @@ import { getCustomer } from "@/modules/customers/customer.repository";
 import { getProduct } from "@/modules/products/product.repository";
 import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
+  getAvailableSalesLines,
   getPaginatedSalesLines,
   getSalesLine,
   getSalesLineCount,
@@ -12,7 +13,11 @@ import {
   softDeleteSalesLine,
   updateSalesLine,
 } from "./sales-line.repository";
-import { SalesLine, SalesLineListInput } from "./sales-line.types";
+import {
+  SalesLine,
+  SalesLineListInput,
+  SalesLineSelectOption,
+} from "./sales-line.types";
 import { SalesLineSortBySchema } from "./sales-line.schema";
 
 type SalesLineMutationInput = {
@@ -135,6 +140,16 @@ export async function getSalesLineService(input: { id: string }) {
   await auth.require("view", "sales_lines");
 
   return getSalesLine(input.id);
+}
+
+export async function getAvailableSalesLinesService(input?: {
+  includeIds?: string[];
+}): Promise<SalesLineSelectOption[]> {
+  const auth = await getAuthContext();
+
+  await auth.require("view", "sales_lines");
+
+  return getAvailableSalesLines(input?.includeIds ?? []);
 }
 
 export async function createSalesLineService(input: SalesLineMutationInput) {
