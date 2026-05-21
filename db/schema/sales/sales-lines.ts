@@ -23,6 +23,7 @@ export const salesLines = pgTable("sales_lines", {
   unitSellPrice: integer("unit_sell_price"),
   sourceMode: varchar("source_mode", { length: 32 }).notNull(),
   sourceDeliveryId: uuid("source_delivery_id"),
+  sourceSupplierPurchaseItemId: uuid("source_supplier_purchase_item_id"),
   supplierId: uuid("supplier_id").references(() => suppliers.id, {
     onDelete: "set null",
   }),

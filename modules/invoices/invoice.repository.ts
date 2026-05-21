@@ -24,6 +24,8 @@ import {
   invoices,
   products,
   salesLines,
+  supplierPurchaseItems,
+  supplierPurchases,
   user,
 } from "@/db/schema";
 import { InvoiceSortBy, InvoiceSortOrder } from "./invoice.types";
@@ -203,11 +205,20 @@ export async function getDeliveredSalesLinesForCustomer(customerId: string) {
       status: salesLines.status,
       deliveryRecordedAt: deliveries.recordedAt,
       deliveryDeliveredAt: deliveries.deliveredAt,
+      supplierPurchaseDate: supplierPurchases.purchaseDate,
       updatedAt: salesLines.updatedAt,
     })
     .from(salesLines)
     .leftJoin(customers, eq(salesLines.customerId, customers.id))
     .leftJoin(products, eq(salesLines.productId, products.id))
+    .leftJoin(
+      supplierPurchaseItems,
+      eq(salesLines.sourceSupplierPurchaseItemId, supplierPurchaseItems.id),
+    )
+    .leftJoin(
+      supplierPurchases,
+      eq(supplierPurchaseItems.supplierPurchaseId, supplierPurchases.id),
+    )
     .leftJoin(
       deliveryItems,
       and(
@@ -246,11 +257,20 @@ export async function getDeliveredSalesLinesForPreview(customerId: string) {
       status: salesLines.status,
       deliveryRecordedAt: deliveries.recordedAt,
       deliveryDeliveredAt: deliveries.deliveredAt,
+      supplierPurchaseDate: supplierPurchases.purchaseDate,
       updatedAt: salesLines.updatedAt,
     })
     .from(salesLines)
     .leftJoin(customers, eq(salesLines.customerId, customers.id))
     .leftJoin(products, eq(salesLines.productId, products.id))
+    .leftJoin(
+      supplierPurchaseItems,
+      eq(salesLines.sourceSupplierPurchaseItemId, supplierPurchaseItems.id),
+    )
+    .leftJoin(
+      supplierPurchases,
+      eq(supplierPurchaseItems.supplierPurchaseId, supplierPurchases.id),
+    )
     .leftJoin(
       deliveryItems,
       and(

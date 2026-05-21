@@ -66,6 +66,17 @@ const DirectDeliveryItemSchema = z.object({
     z.union([z.string().uuid("Sales line is invalid"), z.null()]),
   ),
   productId: z.string().uuid("Product is required"),
+  supplierId: z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized || null;
+      }
+
+      return value;
+    },
+    z.union([z.string().uuid("Supplier is invalid"), z.null()]),
+  ),
   quantity: z.preprocess(
     (value) => {
       if (typeof value === "string" && value.trim() === "") {
@@ -81,6 +92,18 @@ const DirectDeliveryItemSchema = z.object({
     error: () => ({ message: "Source mode is required" }),
   }),
   notes: nullableText(500, "Item notes"),
+}).superRefine((value, ctx) => {
+  if (
+    (value.sourceMode === "supplier_direct" ||
+      value.sourceMode === "supplier_prepacked") &&
+    !value.supplierId
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["supplierId"],
+      message: "Supplier is required for supplier delivery items",
+    });
+  }
 });
 
 const DeliveryItemSchema = z.discriminatedUnion("itemMode", [

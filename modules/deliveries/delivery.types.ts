@@ -1,7 +1,12 @@
 import { ListInput, ListSortOrder } from "@/types";
 
 export const DELIVERY_STATUSES = ["recorded", "delivered", "void"] as const;
-export const DELIVERY_DIRECT_SOURCE_MODES = ["stock", "manual"] as const;
+export const DELIVERY_DIRECT_SOURCE_MODES = [
+  "stock",
+  "supplier_direct",
+  "supplier_prepacked",
+  "manual",
+] as const;
 
 export type Delivery = {
   id: string;
@@ -25,6 +30,7 @@ export type DeliveryItem = {
   deliveryId: string;
   salesLineId: string;
   salesLineSourceDeliveryId: string | null;
+  salesLineSupplierId: string | null;
   salesLineCustomerId: string | null;
   salesLineStatus: string | null;
   productId: string;

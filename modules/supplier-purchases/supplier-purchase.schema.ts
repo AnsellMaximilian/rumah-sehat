@@ -46,6 +46,7 @@ function nullableWholeNumber(label: string) {
 }
 
 const SupplierPurchaseItemObjectSchema = z.object({
+  id: nullableUuid("Item"),
   productId: z.string().uuid("Product is required"),
   quantity: z
     .coerce.number()
@@ -98,7 +99,7 @@ export const UpdateSupplierPurchaseSchema = z.object({
   referenceNumber: SupplierPurchaseBaseSchema.shape.referenceNumber.optional(),
   status: SupplierPurchaseBaseSchema.shape.status.optional(),
   notes: SupplierPurchaseBaseSchema.shape.notes.optional(),
-  items: z.array(SupplierPurchaseItemObjectSchema).optional(),
+  items: z.array(SupplierPurchaseItemSchema).optional(),
 });
 
 export const SupplierPurchaseSortBySchema = z.enum([

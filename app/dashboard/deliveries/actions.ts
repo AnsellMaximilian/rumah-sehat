@@ -14,6 +14,7 @@ export type DeliveryItemFormValues = {
   itemMode: string;
   salesLineId: string;
   productId: string;
+  supplierId: string;
   quantity: string;
   unitSellPrice: string;
   sourceMode: string;
@@ -51,6 +52,7 @@ function getDeliveryValues(formData: FormData): DeliveryFormValues {
   const itemModes = formData.getAll("itemMode").map(String);
   const salesLineIds = formData.getAll("itemSalesLineId").map(String);
   const productIds = formData.getAll("itemProductId").map(String);
+  const supplierIds = formData.getAll("itemSupplierId").map(String);
   const quantities = formData.getAll("itemQuantity").map(String);
   const unitSellPrices = formData.getAll("itemUnitSellPrice").map(String);
   const sourceModes = formData.getAll("itemSourceMode").map(String);
@@ -59,6 +61,7 @@ function getDeliveryValues(formData: FormData): DeliveryFormValues {
     itemModes.length,
     salesLineIds.length,
     productIds.length,
+    supplierIds.length,
     quantities.length,
     unitSellPrices.length,
     sourceModes.length,
@@ -76,6 +79,7 @@ function getDeliveryValues(formData: FormData): DeliveryFormValues {
       itemMode: itemModes[index] ?? "existing",
       salesLineId: salesLineIds[index] ?? "",
       productId: productIds[index] ?? "",
+      supplierId: supplierIds[index] ?? "",
       quantity: quantities[index] ?? "",
       unitSellPrice: unitSellPrices[index] ?? "",
       sourceMode: sourceModes[index] ?? "stock",

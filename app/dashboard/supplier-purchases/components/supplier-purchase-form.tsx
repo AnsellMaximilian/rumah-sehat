@@ -18,6 +18,10 @@ import {
   SUPPLIER_PURCHASE_STATUSES,
   SupplierPurchaseDetail,
 } from "@/modules/supplier-purchases/supplier-purchase.types";
+import {
+  getSupplierPurchaseItemWorkflowHint,
+  getSupplierPurchaseStatusWorkflowHint,
+} from "@/modules/supplier-purchases/supplier-purchase-workflow";
 import { SupplierSelectOption } from "@/modules/suppliers/supplier.types";
 import { ProductSelectOption } from "@/modules/products/product.types";
 import { CustomerSelectOption } from "@/modules/customers/customer.types";
@@ -45,6 +49,7 @@ const DESTINATION_LABELS: Record<
 
 function createEmptyItem(): SupplierPurchaseItemFormValues {
   return {
+    id: "",
     productId: "",
     quantity: "",
     unitCost: "",
@@ -82,6 +87,7 @@ export default function SupplierPurchaseForm({
           items:
             purchase.items.length > 0
               ? purchase.items.map((item) => ({
+                  id: item.id,
                   productId: item.productId,
                   quantity: String(item.quantity),
                   unitCost: item.unitCost === null ? "" : String(item.unitCost),
@@ -106,6 +112,7 @@ export default function SupplierPurchaseForm({
     : createSupplierPurchaseAction;
 
   const [state, formAction, pending] = useActionState(action, initialState);
+  const [status, setStatus] = useState(state.values.status);
   const [items, setItems] = useState<SupplierPurchaseItemFormValues[]>(
     state.values.items.length > 0 ? state.values.items : [createEmptyItem()],
   );
@@ -221,7 +228,8 @@ export default function SupplierPurchaseForm({
             id="status"
             name="status"
             className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
-            defaultValue={state.values.status}
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
             aria-describedby="status-error"
           >
             {SUPPLIER_PURCHASE_STATUSES.map((status) => (
@@ -230,6 +238,9 @@ export default function SupplierPurchaseForm({
               </option>
             ))}
           </select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {getSupplierPurchaseStatusWorkflowHint(status)}
+          </p>
           <FormError errorField={state.errors.status} errorId="status-error" />
         </div>
 
@@ -268,9 +279,21 @@ export default function SupplierPurchaseForm({
               item.quantity && item.unitCost
                 ? Math.round(Number(item.quantity) * Number(item.unitCost))
                 : null;
+            const workflowHint = getSupplierPurchaseItemWorkflowHint({
+              customerId: item.customerId || null,
+              destinationType: item.destinationType,
+              status,
+            });
+            const workflowToneClassName =
+              workflowHint.tone === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : workflowHint.tone === "warning"
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-border bg-muted/50 text-muted-foreground";
 
             return (
               <div key={index} className="rounded-lg border p-4">
+                <input type="hidden" name="itemId" value={item.id} />
                 <div className="mb-4 flex items-center justify-between gap-4">
                   <h3 className="font-medium">Item {index + 1}</h3>
                   <Button
@@ -326,6 +349,9 @@ export default function SupplierPurchaseForm({
                         </option>
                       ))}
                     </select>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {workflowHint.summary}
+                    </p>
                   </div>
 
                   <div>
@@ -398,6 +424,14 @@ export default function SupplierPurchaseForm({
                             currency: "IDR",
                             maximumFractionDigits: 0,
                           }).format(lineTotal)}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <div
+                      className={`rounded-lg border px-3 py-2 text-sm ${workflowToneClassName}`}
+                    >
+                      {workflowHint.detail}
                     </div>
                   </div>
 

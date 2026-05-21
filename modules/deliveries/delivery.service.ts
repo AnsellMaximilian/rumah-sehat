@@ -8,6 +8,7 @@ import {
 } from "@/modules/invoices/invoice.service";
 import { getProduct } from "@/modules/products/product.repository";
 import { getSalesLine } from "@/modules/sales-lines/sales-line.repository";
+import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
   getActiveDeliveryItemsBySalesLineIds,
   getAllDeliveries,
@@ -37,6 +38,7 @@ type DeliveryItemMutationInput =
       itemMode: "direct";
       salesLineId: string | null;
       productId: string;
+      supplierId: string | null;
       quantity: number;
       unitSellPrice: number | null;
       sourceMode: string;
@@ -78,6 +80,7 @@ function normalizeDeliveryInput(input: DeliveryMutationInput) {
             itemMode: "direct" as const,
             salesLineId: item.salesLineId,
             productId: item.productId,
+            supplierId: normalizeOptionalText(item.supplierId),
             quantity: item.quantity,
             unitSellPrice: item.unitSellPrice,
             sourceMode: item.sourceMode,
@@ -114,6 +117,20 @@ async function ensureProductExists(productId: string) {
   return product;
 }
 
+async function ensureSupplierExists(supplierId: string | null) {
+  if (!supplierId) {
+    return null;
+  }
+
+  const supplier = await getSupplier(supplierId);
+
+  if (!supplier) {
+    throw new Error("Supplier not found");
+  }
+
+  return supplier;
+}
+
 async function ensureSalesLinesBelongToCustomer(input: {
   customerId: string;
   currentDeliverySalesLineIds?: string[];
@@ -146,10 +163,43 @@ async function ensureSalesLinesBelongToCustomer(input: {
 }
 
 async function ensureDirectItemsAreValid(
-  items: Extract<DeliveryItemMutationInput, { itemMode: "direct" }>[],
+  input: {
+    currentDeliveryId?: string;
+    items: Extract<DeliveryItemMutationInput, { itemMode: "direct" }>[];
+  },
 ) {
-  for (const item of items) {
-    await ensureProductExists(item.productId);
+  for (const item of input.items) {
+    const product = await ensureProductExists(item.productId);
+
+    await ensureSupplierExists(item.supplierId);
+
+    if (
+      (item.sourceMode === "supplier_direct" ||
+        item.sourceMode === "supplier_prepacked") &&
+      !item.supplierId
+    ) {
+      throw new Error("Supplier is required for supplier delivery items");
+    }
+
+    if (
+      item.supplierId &&
+      product.supplierId &&
+      item.supplierId !== product.supplierId
+    ) {
+      throw new Error(`Product ${product.name} belongs to a different supplier`);
+    }
+
+    if (item.salesLineId) {
+      const salesLine = await getSalesLine(item.salesLineId);
+
+      if (!salesLine) {
+        throw new Error("One or more direct delivery sales lines no longer exist");
+      }
+
+      if (!input.currentDeliveryId || salesLine.sourceDeliveryId !== input.currentDeliveryId) {
+        throw new Error("Direct delivery items can only update sales lines created by this delivery");
+      }
+    }
   }
 }
 
@@ -256,7 +306,9 @@ export async function createDeliveryService(input: DeliveryMutationInput) {
   await ensureSalesLinesAreUnassigned({
     salesLineIds: existingItems.map((item) => item.salesLineId),
   });
-  await ensureDirectItemsAreValid(directItems);
+  await ensureDirectItemsAreValid({
+    items: directItems,
+  });
 
   const createdDelivery = await insertDelivery({
     delivery: {
@@ -320,7 +372,10 @@ export async function updateDeliveryService(
     excludeDeliveryId: input.id,
     salesLineIds: linkedExistingItems.map((item) => item.salesLineId),
   });
-  await ensureDirectItemsAreValid(directItems);
+  await ensureDirectItemsAreValid({
+    currentDeliveryId: input.id,
+    items: directItems,
+  });
 
   const updatedDelivery = await updateDelivery(input.id, {
     delivery: {

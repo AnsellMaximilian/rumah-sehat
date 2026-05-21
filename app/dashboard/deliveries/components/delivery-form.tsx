@@ -21,6 +21,7 @@ import {
 } from "@/modules/deliveries/delivery.types";
 import { ProductSelectOption } from "@/modules/products/product.types";
 import { SalesLineSelectOption } from "@/modules/sales-lines/sales-line.types";
+import { SupplierSelectOption } from "@/modules/suppliers/supplier.types";
 
 const STATUS_LABELS: Record<(typeof DELIVERY_STATUSES)[number], string> = {
   recorded: "Recorded",
@@ -33,6 +34,7 @@ function createEmptyItem(): DeliveryItemFormValues {
     itemMode: "existing",
     salesLineId: "",
     productId: "",
+    supplierId: "",
     quantity: "",
     unitSellPrice: "",
     sourceMode: "stock",
@@ -55,11 +57,13 @@ export default function DeliveryForm({
   delivery,
   productOptions,
   salesLineOptions,
+  suppliers,
 }: {
   customers: CustomerSelectOption[];
   delivery?: DeliveryDetail;
   productOptions: ProductSelectOption[];
   salesLineOptions: SalesLineSelectOption[];
+  suppliers: SupplierSelectOption[];
 }) {
   const initialState: DeliveryState = {
     errors: {},
@@ -81,6 +85,7 @@ export default function DeliveryForm({
                     item.salesLineSourceDeliveryId === delivery.id ? "direct" : "existing",
                   salesLineId: item.salesLineId ?? "",
                   productId: item.productId,
+                  supplierId: item.salesLineSupplierId ?? "",
                   quantity: String(item.quantity),
                   unitSellPrice:
                     item.unitSellPrice === null ? "" : String(item.unitSellPrice),
@@ -138,6 +143,7 @@ export default function DeliveryForm({
             itemMode: "direct",
             salesLineId: "",
             productId: "",
+            supplierId: "",
             quantity: "",
             unitSellPrice: "",
             sourceMode: "stock",
@@ -149,6 +155,7 @@ export default function DeliveryForm({
           itemMode: "existing",
           salesLineId: "",
           productId: "",
+          supplierId: "",
           quantity: "",
           unitSellPrice: "",
           sourceMode: "stock",
@@ -360,6 +367,7 @@ export default function DeliveryForm({
                     <input type="hidden" name="itemQuantity" value="" />
                     <input type="hidden" name="itemUnitSellPrice" value="" />
                     <input type="hidden" name="itemSourceMode" value="" />
+                    <input type="hidden" name="itemSupplierId" value="" />
                   </div>
                 ) : (
                   <>
@@ -387,6 +395,36 @@ export default function DeliveryForm({
                               ? `${product.productCode} - ${product.name}`
                               : product.name}
                             {!product.active ? " (inactive)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="mb-2 block text-sm font-medium">
+                        Supplier{" "}
+                        <span className="text-muted-foreground">
+                          {item.sourceMode === "supplier_direct" ||
+                          item.sourceMode === "supplier_prepacked"
+                            ? "(required)"
+                            : "(optional)"}
+                        </span>
+                      </label>
+                      <select
+                        name="itemSupplierId"
+                        className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+                        value={item.supplierId}
+                        onChange={(event) =>
+                          updateItem(index, "supplierId", event.target.value)
+                        }
+                      >
+                        <option value="">No supplier</option>
+                        {suppliers.map((supplier) => (
+                          <option key={supplier.id} value={supplier.id}>
+                            {supplier.supplierCode
+                              ? `${supplier.supplierCode} - ${supplier.name}`
+                              : supplier.name}
+                            {!supplier.active ? " (inactive)" : ""}
                           </option>
                         ))}
                       </select>

@@ -20,6 +20,8 @@ type SalesLineMutationInput = {
   quantity: number;
   unitSellPrice: number | null;
   sourceMode: string;
+  sourceDeliveryId?: string | null;
+  sourceSupplierPurchaseItemId?: string | null;
   supplierId: string | null;
   status: string;
   notes: string | null;
@@ -144,6 +146,21 @@ export async function getAvailableSalesLines(includeIds: string[] = []) {
     .orderBy(asc(customers.customerCode), asc(products.name));
 }
 
+export async function getSalesLinesBySourceSupplierPurchaseItemIds(
+  sourceSupplierPurchaseItemIds: string[],
+) {
+  if (sourceSupplierPurchaseItemIds.length === 0) {
+    return [];
+  }
+
+  return buildBaseSalesLineQuery().where(
+    and(
+      inArray(salesLines.sourceSupplierPurchaseItemId, sourceSupplierPurchaseItemIds),
+      isNull(salesLines.deletedAt),
+    ),
+  );
+}
+
 export async function insertSalesLine(input: SalesLineMutationInput) {
   const [salesLine] = await db
     .insert(salesLines)
@@ -166,6 +183,12 @@ export async function updateSalesLine(
     updateData.unitSellPrice = input.unitSellPrice;
   }
   if (input.sourceMode !== undefined) updateData.sourceMode = input.sourceMode;
+  if (input.sourceDeliveryId !== undefined) {
+    updateData.sourceDeliveryId = input.sourceDeliveryId;
+  }
+  if (input.sourceSupplierPurchaseItemId !== undefined) {
+    updateData.sourceSupplierPurchaseItemId = input.sourceSupplierPurchaseItemId;
+  }
   if (input.supplierId !== undefined) updateData.supplierId = input.supplierId;
   if (input.status !== undefined) updateData.status = input.status;
   if (input.notes !== undefined) updateData.notes = input.notes;

@@ -5,6 +5,7 @@ import DeliveryForm from "../../components/delivery-form";
 import { getDeliveryService } from "@/modules/deliveries/delivery.service";
 import { getAllProductsService } from "@/modules/products/product.service";
 import { getAvailableSalesLinesService } from "@/modules/sales-lines/sales-line.service";
+import { getAllSuppliersService } from "@/modules/suppliers/supplier.service";
 
 interface EditDeliveryPageProps {
   params: Promise<{
@@ -20,12 +21,13 @@ export default async function Page({ params }: EditDeliveryPageProps) {
     notFound();
   }
 
-  const [customers, productOptions, salesLineOptions] = await Promise.all([
+  const [customers, productOptions, salesLineOptions, suppliers] = await Promise.all([
     getAllCustomersService(),
     getAllProductsService(),
     getAvailableSalesLinesService({
       includeIds: delivery.items.map((item) => item.salesLineId),
     }),
+    getAllSuppliersService(),
   ]);
 
   return (
@@ -42,6 +44,7 @@ export default async function Page({ params }: EditDeliveryPageProps) {
         delivery={delivery}
         productOptions={productOptions}
         salesLineOptions={salesLineOptions}
+        suppliers={suppliers}
       />
     </PageSection>
   );

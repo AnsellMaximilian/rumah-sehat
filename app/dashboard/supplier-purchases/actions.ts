@@ -11,6 +11,7 @@ import {
 } from "@/modules/supplier-purchases/supplier-purchase.service";
 
 export type SupplierPurchaseItemFormValues = {
+  id: string;
   productId: string;
   quantity: string;
   unitCost: string;
@@ -45,6 +46,7 @@ export type SupplierPurchaseState = {
 };
 
 function getSupplierPurchaseValues(formData: FormData): SupplierPurchaseFormValues {
+  const itemIds = formData.getAll("itemId").map(String);
   const productIds = formData.getAll("itemProductId").map(String);
   const quantities = formData.getAll("itemQuantity").map(String);
   const unitCosts = formData.getAll("itemUnitCost").map(String);
@@ -52,6 +54,7 @@ function getSupplierPurchaseValues(formData: FormData): SupplierPurchaseFormValu
   const customerIds = formData.getAll("itemCustomerId").map(String);
   const notes = formData.getAll("itemNotes").map(String);
   const itemCount = Math.max(
+    itemIds.length,
     productIds.length,
     quantities.length,
     unitCosts.length,
@@ -67,6 +70,7 @@ function getSupplierPurchaseValues(formData: FormData): SupplierPurchaseFormValu
     status: String(formData.get("status") ?? "draft"),
     notes: String(formData.get("notes") ?? ""),
     items: Array.from({ length: itemCount }, (_, index) => ({
+      id: itemIds[index] ?? "",
       productId: productIds[index] ?? "",
       quantity: quantities[index] ?? "",
       unitCost: unitCosts[index] ?? "",

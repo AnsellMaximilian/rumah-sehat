@@ -42,6 +42,7 @@ type DeliveryItemMutationInput =
       itemMode: "direct";
       salesLineId: string | null;
       productId: string;
+      supplierId: string | null;
       quantity: number;
       unitSellPrice: number | null;
       sourceMode: string;
@@ -98,6 +99,7 @@ function buildBaseDeliveryItemQuery() {
     .select({
       ...itemColumns,
       salesLineSourceDeliveryId: salesLines.sourceDeliveryId,
+      salesLineSupplierId: salesLines.supplierId,
       salesLineCustomerId: salesLines.customerId,
       salesLineStatus: salesLines.status,
       productName: products.name,
@@ -245,6 +247,21 @@ async function softDeleteSalesLines(
     );
 }
 
+function resolveDirectSalesLineStatus(input: {
+  deliveryStatus: string;
+  sourceMode: string;
+}) {
+  if (input.deliveryStatus === "delivered") {
+    return "delivered";
+  }
+
+  if (input.sourceMode === "supplier_direct") {
+    return "pending";
+  }
+
+  return "ready_for_delivery";
+}
+
 async function resolveDeliverySalesLines(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   input: {
@@ -274,8 +291,10 @@ async function resolveDeliverySalesLines(
       continue;
     }
 
-    const salesLineStatus =
-      input.deliveryStatus === "delivered" ? "delivered" : "ready_for_delivery";
+    const salesLineStatus = resolveDirectSalesLineStatus({
+      deliveryStatus: input.deliveryStatus,
+      sourceMode: item.sourceMode,
+    });
 
     if (item.salesLineId) {
       const [salesLine] = await tx
@@ -287,6 +306,7 @@ async function resolveDeliverySalesLines(
           unitSellPrice: item.unitSellPrice,
           sourceMode: item.sourceMode,
           sourceDeliveryId: input.deliveryId,
+          supplierId: item.supplierId,
           status: salesLineStatus,
           notes: item.notes,
         })
@@ -319,7 +339,7 @@ async function resolveDeliverySalesLines(
         unitSellPrice: item.unitSellPrice,
         sourceMode: item.sourceMode,
         sourceDeliveryId: input.deliveryId,
-        supplierId: null,
+        supplierId: item.supplierId,
         status: salesLineStatus,
         notes: item.notes,
       })

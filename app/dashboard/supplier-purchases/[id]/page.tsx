@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   SupplierPurchaseDetail,
 } from "@/modules/supplier-purchases/supplier-purchase.types";
+import {
+  getSupplierPurchaseItemWorkflowHint,
+  getSupplierPurchaseStatusWorkflowHint,
+} from "@/modules/supplier-purchases/supplier-purchase-workflow";
 import { getSupplierPurchaseService } from "@/modules/supplier-purchases/supplier-purchase.service";
 import { formatRupiah } from "@/lib/utils";
 import {
@@ -67,6 +71,11 @@ export default async function Page(
                   </Badge>
                 }
               />
+              <DetailItem
+                label="Workflow Effect"
+                value={getSupplierPurchaseStatusWorkflowHint(purchase.status)}
+                valueClassName="whitespace-pre-wrap"
+              />
               <DetailItem label="Created By" value={purchase.createdByName || "-"} />
               <DetailItem
                 label="Notes"
@@ -95,6 +104,7 @@ export default async function Page(
                 <TableHead>Qty</TableHead>
                 <TableHead>Unit Cost</TableHead>
                 <TableHead>Destination</TableHead>
+                <TableHead>Workflow Effect</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Line Total</TableHead>
               </TableRow>
@@ -105,6 +115,11 @@ export default async function Page(
                   item.unitCost === null
                     ? null
                     : Math.round(item.quantity * item.unitCost);
+                const workflowHint = getSupplierPurchaseItemWorkflowHint({
+                  customerId: item.customerId,
+                  destinationType: item.destinationType,
+                  status: purchase.status,
+                });
 
                 return (
                   <TableRow key={item.id}>
@@ -118,6 +133,9 @@ export default async function Page(
                       {item.unitCost === null ? "-" : formatRupiah(item.unitCost)}
                     </TableCell>
                     <TableCell>{item.destinationType.replaceAll("_", " ")}</TableCell>
+                    <TableCell className="max-w-xs whitespace-normal">
+                      {workflowHint.summary}
+                    </TableCell>
                     <TableCell>
                       {item.customerCode
                         ? `${item.customerCode} - ${item.customerName}`

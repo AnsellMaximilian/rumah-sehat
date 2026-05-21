@@ -99,9 +99,22 @@ function getDateRangeBounds(periodStart: string, periodEnd: string) {
 function getEffectiveEventDate(input: {
   deliveryDeliveredAt: Date | null;
   deliveryRecordedAt: Date | null;
+  supplierPurchaseDate?: string | null;
   fallbackDate?: Date | null;
 }) {
-  return input.deliveryDeliveredAt ?? input.deliveryRecordedAt ?? input.fallbackDate ?? null;
+  if (input.deliveryDeliveredAt) {
+    return input.deliveryDeliveredAt;
+  }
+
+  if (input.deliveryRecordedAt) {
+    return input.deliveryRecordedAt;
+  }
+
+  if (input.supplierPurchaseDate) {
+    return new Date(`${input.supplierPurchaseDate}T00:00:00`);
+  }
+
+  return input.fallbackDate ?? null;
 }
 
 function isDateWithinRange(
@@ -184,6 +197,7 @@ async function buildInvoicePreview(input: {
       getEffectiveEventDate({
         deliveryDeliveredAt: row.deliveryDeliveredAt,
         deliveryRecordedAt: row.deliveryRecordedAt,
+        supplierPurchaseDate: row.supplierPurchaseDate,
         fallbackDate: row.updatedAt,
       }),
       bounds,
