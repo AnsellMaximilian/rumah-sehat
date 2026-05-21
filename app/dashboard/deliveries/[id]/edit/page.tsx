@@ -3,6 +3,7 @@ import PageSection from "@/components/layout/page-section";
 import { getAllCustomersService } from "@/modules/customers/customer.service";
 import DeliveryForm from "../../components/delivery-form";
 import { getDeliveryService } from "@/modules/deliveries/delivery.service";
+import { getAllProductsService } from "@/modules/products/product.service";
 import { getAvailableSalesLinesService } from "@/modules/sales-lines/sales-line.service";
 
 interface EditDeliveryPageProps {
@@ -19,8 +20,9 @@ export default async function Page({ params }: EditDeliveryPageProps) {
     notFound();
   }
 
-  const [customers, salesLineOptions] = await Promise.all([
+  const [customers, productOptions, salesLineOptions] = await Promise.all([
     getAllCustomersService(),
+    getAllProductsService(),
     getAvailableSalesLinesService({
       includeIds: delivery.items.map((item) => item.salesLineId),
     }),
@@ -38,6 +40,7 @@ export default async function Page({ params }: EditDeliveryPageProps) {
       <DeliveryForm
         customers={customers}
         delivery={delivery}
+        productOptions={productOptions}
         salesLineOptions={salesLineOptions}
       />
     </PageSection>

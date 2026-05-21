@@ -32,10 +32,21 @@ type DeliveryMutationInput = {
   createdBy: string;
 };
 
-type DeliveryItemMutationInput = {
-  salesLineId: string;
-  notes: string | null;
-};
+type DeliveryItemMutationInput =
+  | {
+      itemMode: "existing";
+      salesLineId: string;
+      notes: string | null;
+    }
+  | {
+      itemMode: "direct";
+      salesLineId: string | null;
+      productId: string;
+      quantity: number;
+      unitSellPrice: number | null;
+      sourceMode: string;
+      notes: string | null;
+    };
 
 function getDeliveryOrderBy(sortBy: DeliverySortBy, sortOrder: DeliverySortOrder) {
   const columns = {
@@ -86,6 +97,7 @@ function buildBaseDeliveryItemQuery() {
   return db
     .select({
       ...itemColumns,
+      salesLineSourceDeliveryId: salesLines.sourceDeliveryId,
       salesLineCustomerId: salesLines.customerId,
       salesLineStatus: salesLines.status,
       productName: products.name,
@@ -149,6 +161,22 @@ export async function getDeliveryItems(deliveryId: string) {
     .orderBy(asc(deliveryItems.createdAt));
 }
 
+export async function getAllDeliveries() {
+  return db
+    .select({
+      id: deliveries.id,
+      customerId: deliveries.customerId,
+      customerCode: customers.customerCode,
+      customerName: customers.name,
+      recordedAt: deliveries.recordedAt,
+      status: deliveries.status,
+    })
+    .from(deliveries)
+    .leftJoin(customers, eq(deliveries.customerId, customers.id))
+    .where(isNull(deliveries.deletedAt))
+    .orderBy(desc(deliveries.recordedAt), asc(customers.customerCode));
+}
+
 export async function getActiveDeliveryItemsBySalesLineIds(input: {
   excludeDeliveryId?: string;
   salesLineIds: string[];
@@ -198,6 +226,114 @@ async function setSalesLineStatuses(
     );
 }
 
+async function softDeleteSalesLines(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  salesLineIds: string[],
+) {
+  if (salesLineIds.length === 0) {
+    return;
+  }
+
+  await tx
+    .update(salesLines)
+    .set({ deletedAt: new Date() })
+    .where(
+      and(
+        inArray(salesLines.id, salesLineIds),
+        isNull(salesLines.deletedAt),
+      ),
+    );
+}
+
+async function resolveDeliverySalesLines(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  input: {
+    customerId: string;
+    deliveryId: string;
+    deliveryStatus: string;
+    items: DeliveryItemMutationInput[];
+  },
+) {
+  const deliverySalesLines = [];
+
+  for (const item of input.items) {
+    if (item.itemMode === "existing") {
+      const [salesLine] = await tx
+        .select()
+        .from(salesLines)
+        .where(and(eq(salesLines.id, item.salesLineId), isNull(salesLines.deletedAt)));
+
+      if (!salesLine) {
+        throw new Error("One or more sales lines no longer exist");
+      }
+
+      deliverySalesLines.push({
+        notes: item.notes,
+        salesLine,
+      });
+      continue;
+    }
+
+    const salesLineStatus =
+      input.deliveryStatus === "delivered" ? "delivered" : "ready_for_delivery";
+
+    if (item.salesLineId) {
+      const [salesLine] = await tx
+        .update(salesLines)
+        .set({
+          customerId: input.customerId,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitSellPrice: item.unitSellPrice,
+          sourceMode: item.sourceMode,
+          sourceDeliveryId: input.deliveryId,
+          status: salesLineStatus,
+          notes: item.notes,
+        })
+        .where(
+          and(
+            eq(salesLines.id, item.salesLineId),
+            eq(salesLines.sourceDeliveryId, input.deliveryId),
+            isNull(salesLines.deletedAt),
+          ),
+        )
+        .returning();
+
+      if (!salesLine) {
+        throw new Error("One or more direct delivery items can no longer be updated");
+      }
+
+      deliverySalesLines.push({
+        notes: item.notes,
+        salesLine,
+      });
+      continue;
+    }
+
+    const [salesLine] = await tx
+      .insert(salesLines)
+      .values({
+        customerId: input.customerId,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitSellPrice: item.unitSellPrice,
+        sourceMode: item.sourceMode,
+        sourceDeliveryId: input.deliveryId,
+        supplierId: null,
+        status: salesLineStatus,
+        notes: item.notes,
+      })
+      .returning();
+
+    deliverySalesLines.push({
+      notes: item.notes,
+      salesLine,
+    });
+  }
+
+  return deliverySalesLines;
+}
+
 export async function insertDelivery(input: {
   delivery: DeliveryMutationInput;
   items: DeliveryItemMutationInput[];
@@ -208,27 +344,15 @@ export async function insertDelivery(input: {
       .values(input.delivery)
       .returning();
 
-    const linkedSalesLines = await tx
-      .select()
-      .from(salesLines)
-      .where(
-        and(
-          inArray(
-            salesLines.id,
-            input.items.map((item) => item.salesLineId),
-          ),
-          isNull(salesLines.deletedAt),
-        ),
-      );
+    const linkedSalesLines = await resolveDeliverySalesLines(tx, {
+      customerId: input.delivery.customerId,
+      deliveryId: delivery.id,
+      deliveryStatus: input.delivery.status,
+      items: input.items,
+    });
 
     await tx.insert(deliveryItems).values(
-      input.items.map((item) => {
-        const salesLine = linkedSalesLines.find((line) => line.id === item.salesLineId);
-
-        if (!salesLine) {
-          throw new Error("One or more sales lines no longer exist");
-        }
-
+      linkedSalesLines.map(({ salesLine, notes }) => {
         return {
           deliveryId: delivery.id,
           salesLineId: salesLine.id,
@@ -236,7 +360,7 @@ export async function insertDelivery(input: {
           quantity: salesLine.quantity,
           unitSellPrice: salesLine.unitSellPrice,
           sourceMode: salesLine.sourceMode,
-          notes: item.notes,
+          notes,
         };
       }),
     );
@@ -244,7 +368,7 @@ export async function insertDelivery(input: {
     if (input.delivery.status === "delivered") {
       await setSalesLineStatuses(
         tx,
-        input.items.map((item) => item.salesLineId),
+        linkedSalesLines.map(({ salesLine }) => salesLine.id),
         "delivered",
       );
     }
@@ -271,17 +395,16 @@ export async function updateDelivery(
     const previousItems = await tx
       .select({
         salesLineId: deliveryItems.salesLineId,
+        salesLineSourceDeliveryId: salesLines.sourceDeliveryId,
       })
       .from(deliveryItems)
+      .innerJoin(salesLines, eq(deliveryItems.salesLineId, salesLines.id))
       .where(
         and(
           eq(deliveryItems.deliveryId, id),
           isNull(deliveryItems.deletedAt),
         ),
       );
-
-    const previousSalesLineIds = previousItems
-      .map((item) => item.salesLineId);
 
     const [delivery] = await tx
       .update(deliveries)
@@ -293,27 +416,15 @@ export async function updateDelivery(
       .delete(deliveryItems)
       .where(eq(deliveryItems.deliveryId, id));
 
-    const linkedSalesLines = await tx
-      .select()
-      .from(salesLines)
-      .where(
-        and(
-          inArray(
-            salesLines.id,
-            input.items.map((item) => item.salesLineId),
-          ),
-          isNull(salesLines.deletedAt),
-        ),
-      );
+    const linkedSalesLines = await resolveDeliverySalesLines(tx, {
+      customerId: input.delivery.customerId,
+      deliveryId: id,
+      deliveryStatus: input.delivery.status,
+      items: input.items,
+    });
 
     await tx.insert(deliveryItems).values(
-      input.items.map((item) => {
-        const salesLine = linkedSalesLines.find((line) => line.id === item.salesLineId);
-
-        if (!salesLine) {
-          throw new Error("One or more sales lines no longer exist");
-        }
-
+      linkedSalesLines.map(({ salesLine, notes }) => {
         return {
           deliveryId: id,
           salesLineId: salesLine.id,
@@ -321,19 +432,34 @@ export async function updateDelivery(
           quantity: salesLine.quantity,
           unitSellPrice: salesLine.unitSellPrice,
           sourceMode: salesLine.sourceMode,
-          notes: item.notes,
+          notes,
         };
       }),
     );
 
-    if (existingDelivery?.status === "delivered" && previousSalesLineIds.length > 0) {
-      await setSalesLineStatuses(tx, previousSalesLineIds, "ready_for_delivery");
+    const nextSalesLineIds = linkedSalesLines.map(({ salesLine }) => salesLine.id);
+    const previousExistingSalesLineIds = previousItems
+      .filter((item) => item.salesLineSourceDeliveryId !== id)
+      .map((item) => item.salesLineId);
+    const removedSourceCreatedSalesLineIds = previousItems
+      .filter(
+        (item) =>
+          item.salesLineSourceDeliveryId === id && !nextSalesLineIds.includes(item.salesLineId),
+      )
+      .map((item) => item.salesLineId);
+
+    if (existingDelivery?.status === "delivered" && previousExistingSalesLineIds.length > 0) {
+      await setSalesLineStatuses(tx, previousExistingSalesLineIds, "ready_for_delivery");
+    }
+
+    if (removedSourceCreatedSalesLineIds.length > 0) {
+      await softDeleteSalesLines(tx, removedSourceCreatedSalesLineIds);
     }
 
     if (input.delivery.status === "delivered") {
       await setSalesLineStatuses(
         tx,
-        input.items.map((item) => item.salesLineId),
+        nextSalesLineIds,
         "delivered",
       );
     }
@@ -354,8 +480,10 @@ export async function softDeleteDelivery(id: string) {
     const existingItems = await tx
       .select({
         salesLineId: deliveryItems.salesLineId,
+        salesLineSourceDeliveryId: salesLines.sourceDeliveryId,
       })
       .from(deliveryItems)
+      .innerJoin(salesLines, eq(deliveryItems.salesLineId, salesLines.id))
       .where(
         and(
           eq(deliveryItems.deliveryId, id),
@@ -363,7 +491,11 @@ export async function softDeleteDelivery(id: string) {
         ),
       );
 
-    const linkedSalesLineIds = existingItems
+    const sourceCreatedSalesLineIds = existingItems
+      .filter((item) => item.salesLineSourceDeliveryId === id)
+      .map((item) => item.salesLineId);
+    const existingSalesLineIds = existingItems
+      .filter((item) => item.salesLineSourceDeliveryId !== id)
       .map((item) => item.salesLineId);
 
     await tx
@@ -384,8 +516,12 @@ export async function softDeleteDelivery(id: string) {
       .where(and(eq(deliveries.id, id), isNull(deliveries.deletedAt)))
       .returning();
 
-    if (existingDelivery?.status === "delivered" && linkedSalesLineIds.length > 0) {
-      await setSalesLineStatuses(tx, linkedSalesLineIds, "ready_for_delivery");
+    if (existingDelivery?.status === "delivered" && existingSalesLineIds.length > 0) {
+      await setSalesLineStatuses(tx, existingSalesLineIds, "ready_for_delivery");
+    }
+
+    if (sourceCreatedSalesLineIds.length > 0) {
+      await softDeleteSalesLines(tx, sourceCreatedSalesLineIds);
     }
 
     return delivery;

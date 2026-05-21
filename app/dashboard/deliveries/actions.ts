@@ -11,7 +11,12 @@ import {
 } from "@/modules/deliveries/delivery.service";
 
 export type DeliveryItemFormValues = {
+  itemMode: string;
   salesLineId: string;
+  productId: string;
+  quantity: string;
+  unitSellPrice: string;
+  sourceMode: string;
   notes: string;
 };
 
@@ -43,9 +48,22 @@ export type DeliveryState = {
 };
 
 function getDeliveryValues(formData: FormData): DeliveryFormValues {
+  const itemModes = formData.getAll("itemMode").map(String);
   const salesLineIds = formData.getAll("itemSalesLineId").map(String);
+  const productIds = formData.getAll("itemProductId").map(String);
+  const quantities = formData.getAll("itemQuantity").map(String);
+  const unitSellPrices = formData.getAll("itemUnitSellPrice").map(String);
+  const sourceModes = formData.getAll("itemSourceMode").map(String);
   const notes = formData.getAll("itemNotes").map(String);
-  const itemCount = Math.max(salesLineIds.length, notes.length);
+  const itemCount = Math.max(
+    itemModes.length,
+    salesLineIds.length,
+    productIds.length,
+    quantities.length,
+    unitSellPrices.length,
+    sourceModes.length,
+    notes.length,
+  );
 
   return {
     customerId: String(formData.get("customerId") ?? ""),
@@ -55,7 +73,12 @@ function getDeliveryValues(formData: FormData): DeliveryFormValues {
     status: String(formData.get("status") ?? "recorded"),
     notes: String(formData.get("notes") ?? ""),
     items: Array.from({ length: itemCount }, (_, index) => ({
+      itemMode: itemModes[index] ?? "existing",
       salesLineId: salesLineIds[index] ?? "",
+      productId: productIds[index] ?? "",
+      quantity: quantities[index] ?? "",
+      unitSellPrice: unitSellPrices[index] ?? "",
+      sourceMode: sourceModes[index] ?? "stock",
       notes: notes[index] ?? "",
     })),
   };

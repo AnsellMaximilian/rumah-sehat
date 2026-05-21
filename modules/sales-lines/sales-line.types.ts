@@ -27,6 +27,7 @@ export type SalesLine = {
   quantity: number;
   unitSellPrice: number | null;
   sourceMode: string;
+  sourceDeliveryId: string | null;
   supplierId: string | null;
   supplierName: string | null;
   status: string;

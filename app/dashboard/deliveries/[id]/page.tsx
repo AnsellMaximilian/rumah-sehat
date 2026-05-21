@@ -13,11 +13,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatRupiah } from "@/lib/utils";
+import { getDeliveryChargesByDeliveryService } from "@/modules/delivery-charges/delivery-charge.service";
 import { getDeliveryService } from "@/modules/deliveries/delivery.service";
 
 export default async function Page(props: PageProps<"/dashboard/deliveries/[id]">) {
   const { id } = await props.params;
-  const delivery = await getDeliveryService({ id });
+  const [delivery, deliveryCharges] = await Promise.all([
+    getDeliveryService({ id }),
+    getDeliveryChargesByDeliveryService({ deliveryId: id }),
+  ]);
 
   if (!delivery) {
     notFound();
@@ -109,6 +113,43 @@ export default async function Page(props: PageProps<"/dashboard/deliveries/[id]"
                   </TableRow>
                 );
               })}
+            </TableBody>
+          </Table>
+        </DetailCard>
+
+        <DetailCard title="Delivery Charges">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Bill To Customer</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {deliveryCharges.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-muted-foreground">
+                    No delivery charges recorded.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                deliveryCharges.map((deliveryCharge) => (
+                  <TableRow key={deliveryCharge.id}>
+                    <TableCell>
+                      <Badge>
+                        {deliveryCharge.chargeType.replaceAll("_", " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{deliveryCharge.description}</TableCell>
+                    <TableCell>{formatRupiah(deliveryCharge.amount)}</TableCell>
+                    <TableCell>
+                      {deliveryCharge.billToCustomer ? "Yes" : "No"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </DetailCard>

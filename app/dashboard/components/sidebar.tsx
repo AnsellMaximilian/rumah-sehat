@@ -1,10 +1,12 @@
 import Link from "next/link";
 import {
+  Banknote,
   ClipboardList,
   HandHelping,
   LayoutDashboard,
   LogOut,
   Package,
+  ScrollText,
   ReceiptText,
   ShoppingBasket,
   Shapes,
@@ -53,6 +55,16 @@ const sidebarItems = [
         label: "Deliveries",
         icon: HandHelping,
         href: "/dashboard/deliveries",
+      },
+      {
+        label: "Delivery Charges",
+        icon: Banknote,
+        href: "/dashboard/delivery-charges",
+      },
+      {
+        label: "Invoices",
+        icon: ScrollText,
+        href: "/dashboard/invoices",
       },
       { label: "Products", icon: Package, href: "/dashboard/products" },
       { label: "Todos", icon: ClipboardList, href: "/dashboard/todos" },

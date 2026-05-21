@@ -1,11 +1,13 @@
 import PageSection from "@/components/layout/page-section";
 import { getAllCustomersService } from "@/modules/customers/customer.service";
 import DeliveryForm from "../components/delivery-form";
+import { getAllProductsService } from "@/modules/products/product.service";
 import { getAvailableSalesLinesService } from "@/modules/sales-lines/sales-line.service";
 
 export default async function Page() {
-  const [customers, salesLineOptions] = await Promise.all([
+  const [customers, productOptions, salesLineOptions] = await Promise.all([
     getAllCustomersService(),
+    getAllProductsService(),
     getAvailableSalesLinesService(),
   ]);
 
@@ -18,7 +20,11 @@ export default async function Page() {
         { label: "Add Delivery" },
       ]}
     >
-      <DeliveryForm customers={customers} salesLineOptions={salesLineOptions} />
+      <DeliveryForm
+        customers={customers}
+        productOptions={productOptions}
+        salesLineOptions={salesLineOptions}
+      />
     </PageSection>
   );
 }

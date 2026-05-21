@@ -2,9 +2,15 @@ import { PaginatedResult } from "@/types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { getAuthContext } from "@/modules/auth/auth.service";
 import { getCustomer } from "@/modules/customers/customer.repository";
+import {
+  markInvoicesNeedsReviewBySources,
+  markInvoicesNeedsReviewForCustomerDate,
+} from "@/modules/invoices/invoice.service";
+import { getProduct } from "@/modules/products/product.repository";
 import { getSalesLine } from "@/modules/sales-lines/sales-line.repository";
 import {
   getActiveDeliveryItemsBySalesLineIds,
+  getAllDeliveries,
   getDelivery,
   getDeliveryCount,
   getDeliveryItems,
@@ -13,13 +19,29 @@ import {
   softDeleteDelivery,
   updateDelivery,
 } from "./delivery.repository";
-import { Delivery, DeliveryDetail, DeliveryListInput } from "./delivery.types";
+import {
+  Delivery,
+  DeliveryDetail,
+  DeliveryListInput,
+  DeliverySelectOption,
+} from "./delivery.types";
 import { DeliverySortBySchema } from "./delivery.schema";
 
-type DeliveryItemMutationInput = {
-  salesLineId: string;
-  notes: string | null;
-};
+type DeliveryItemMutationInput =
+  | {
+      itemMode: "existing";
+      salesLineId: string;
+      notes: string | null;
+    }
+  | {
+      itemMode: "direct";
+      salesLineId: string | null;
+      productId: string;
+      quantity: number;
+      unitSellPrice: number | null;
+      sourceMode: string;
+      notes: string | null;
+    };
 
 type DeliveryMutationInput = {
   customerId: string;
@@ -46,10 +68,30 @@ function normalizeDeliveryInput(input: DeliveryMutationInput) {
     status: input.status,
     notes: normalizeOptionalText(input.notes),
     items: input.items.map((item) => ({
-      salesLineId: item.salesLineId,
-      notes: normalizeOptionalText(item.notes),
+      ...(item.itemMode === "existing"
+        ? {
+            itemMode: "existing" as const,
+            salesLineId: item.salesLineId,
+            notes: normalizeOptionalText(item.notes),
+          }
+        : {
+            itemMode: "direct" as const,
+            salesLineId: item.salesLineId,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitSellPrice: item.unitSellPrice,
+            sourceMode: item.sourceMode,
+            notes: normalizeOptionalText(item.notes),
+          }),
     })),
   };
+}
+
+function getDeliveryEventDate(input: {
+  deliveredAt: Date | null;
+  recordedAt: Date;
+}) {
+  return input.deliveredAt ?? input.recordedAt;
 }
 
 async function ensureCustomerExists(customerId: string) {
@@ -60,6 +102,16 @@ async function ensureCustomerExists(customerId: string) {
   }
 
   return customer;
+}
+
+async function ensureProductExists(productId: string) {
+  const product = await getProduct(productId);
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  return product;
 }
 
 async function ensureSalesLinesBelongToCustomer(input: {
@@ -90,6 +142,14 @@ async function ensureSalesLinesBelongToCustomer(input: {
     ) {
       throw new Error("Delivered sales lines must be edited from their existing delivery");
     }
+  }
+}
+
+async function ensureDirectItemsAreValid(
+  items: Extract<DeliveryItemMutationInput, { itemMode: "direct" }>[],
+) {
+  for (const item of items) {
+    await ensureProductExists(item.productId);
   }
 }
 
@@ -165,23 +225,40 @@ export async function getDeliveryService(input: { id: string }): Promise<Deliver
   };
 }
 
+export async function getAllDeliveriesService(): Promise<DeliverySelectOption[]> {
+  const auth = await getAuthContext();
+
+  await auth.require("view", "deliveries");
+
+  return getAllDeliveries();
+}
+
 export async function createDeliveryService(input: DeliveryMutationInput) {
   const auth = await getAuthContext();
 
   await auth.require("create", "deliveries");
 
   const normalizedInput = normalizeDeliveryInput(input);
+  const existingItems = normalizedInput.items.filter(
+    (item): item is Extract<DeliveryItemMutationInput, { itemMode: "existing" }> =>
+      item.itemMode === "existing",
+  );
+  const directItems = normalizedInput.items.filter(
+    (item): item is Extract<DeliveryItemMutationInput, { itemMode: "direct" }> =>
+      item.itemMode === "direct",
+  );
 
   await ensureCustomerExists(normalizedInput.customerId);
   await ensureSalesLinesBelongToCustomer({
     customerId: normalizedInput.customerId,
-    salesLineIds: normalizedInput.items.map((item) => item.salesLineId),
+    salesLineIds: existingItems.map((item) => item.salesLineId),
   });
   await ensureSalesLinesAreUnassigned({
-    salesLineIds: normalizedInput.items.map((item) => item.salesLineId),
+    salesLineIds: existingItems.map((item) => item.salesLineId),
   });
+  await ensureDirectItemsAreValid(directItems);
 
-  return insertDelivery({
+  const createdDelivery = await insertDelivery({
     delivery: {
       customerId: normalizedInput.customerId,
       deliveredAt: normalizedInput.deliveredAt,
@@ -193,6 +270,18 @@ export async function createDeliveryService(input: DeliveryMutationInput) {
     },
     items: normalizedInput.items,
   });
+
+  if (normalizedInput.status === "delivered") {
+    await markInvoicesNeedsReviewForCustomerDate({
+      customerId: normalizedInput.customerId,
+      eventDate: getDeliveryEventDate({
+        deliveredAt: normalizedInput.deliveredAt,
+        recordedAt: normalizedInput.recordedAt,
+      }),
+    });
+  }
+
+  return createdDelivery;
 }
 
 export async function updateDeliveryService(
@@ -212,19 +301,28 @@ export async function updateDeliveryService(
   const existingSalesLineIds = existingItems.map((item) => item.salesLineId);
 
   const normalizedInput = normalizeDeliveryInput(input);
+  const linkedExistingItems = normalizedInput.items.filter(
+    (item): item is Extract<DeliveryItemMutationInput, { itemMode: "existing" }> =>
+      item.itemMode === "existing",
+  );
+  const directItems = normalizedInput.items.filter(
+    (item): item is Extract<DeliveryItemMutationInput, { itemMode: "direct" }> =>
+      item.itemMode === "direct",
+  );
 
   await ensureCustomerExists(normalizedInput.customerId);
   await ensureSalesLinesBelongToCustomer({
     customerId: normalizedInput.customerId,
     currentDeliverySalesLineIds: existingSalesLineIds,
-    salesLineIds: normalizedInput.items.map((item) => item.salesLineId),
+    salesLineIds: linkedExistingItems.map((item) => item.salesLineId),
   });
   await ensureSalesLinesAreUnassigned({
     excludeDeliveryId: input.id,
-    salesLineIds: normalizedInput.items.map((item) => item.salesLineId),
+    salesLineIds: linkedExistingItems.map((item) => item.salesLineId),
   });
+  await ensureDirectItemsAreValid(directItems);
 
-  return updateDelivery(input.id, {
+  const updatedDelivery = await updateDelivery(input.id, {
     delivery: {
       customerId: normalizedInput.customerId,
       deliveredAt: normalizedInput.deliveredAt,
@@ -235,6 +333,29 @@ export async function updateDeliveryService(
     },
     items: normalizedInput.items,
   });
+
+  await markInvoicesNeedsReviewBySources({
+    salesLineIds: Array.from(
+      new Set([
+        ...existingSalesLineIds,
+        ...normalizedInput.items
+          .map((item) => item.salesLineId)
+          .filter((salesLineId): salesLineId is string => salesLineId !== null),
+      ]),
+    ),
+  });
+
+  if (normalizedInput.status === "delivered") {
+    await markInvoicesNeedsReviewForCustomerDate({
+      customerId: normalizedInput.customerId,
+      eventDate: getDeliveryEventDate({
+        deliveredAt: normalizedInput.deliveredAt,
+        recordedAt: normalizedInput.recordedAt,
+      }),
+    });
+  }
+
+  return updatedDelivery;
 }
 
 export async function deleteDeliveryService(input: { id: string }) {
@@ -248,5 +369,12 @@ export async function deleteDeliveryService(input: { id: string }) {
     throw new Error("Delivery not found");
   }
 
-  return softDeleteDelivery(input.id);
+  const existingItems = await getDeliveryItems(input.id);
+  const deletedDelivery = await softDeleteDelivery(input.id);
+
+  await markInvoicesNeedsReviewBySources({
+    salesLineIds: existingItems.map((item) => item.salesLineId),
+  });
+
+  return deletedDelivery;
 }

@@ -5,6 +5,10 @@ import { getCustomer } from "@/modules/customers/customer.repository";
 import { getProduct } from "@/modules/products/product.repository";
 import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
+  markInvoicesNeedsReviewBySources,
+  markInvoicesNeedsReviewForCustomerDate,
+} from "@/modules/invoices/invoice.service";
+import {
   getAvailableSalesLines,
   getPaginatedSalesLines,
   getSalesLine,
@@ -167,7 +171,16 @@ export async function createSalesLineService(input: SalesLineMutationInput) {
     supplierId: normalizedInput.supplierId,
   });
 
-  return insertSalesLine(normalizedInput);
+  const createdSalesLine = await insertSalesLine(normalizedInput);
+
+  if (normalizedInput.status === "delivered") {
+    await markInvoicesNeedsReviewForCustomerDate({
+      customerId: normalizedInput.customerId,
+      eventDate: createdSalesLine.updatedAt,
+    });
+  }
+
+  return createdSalesLine;
 }
 
 export async function updateSalesLineService(
@@ -193,7 +206,20 @@ export async function updateSalesLineService(
     supplierId: normalizedInput.supplierId,
   });
 
-  return updateSalesLine(input.id, normalizedInput);
+  const updatedSalesLine = await updateSalesLine(input.id, normalizedInput);
+
+  await markInvoicesNeedsReviewBySources({
+    salesLineIds: [input.id],
+  });
+
+  if (normalizedInput.status === "delivered") {
+    await markInvoicesNeedsReviewForCustomerDate({
+      customerId: normalizedInput.customerId,
+      eventDate: updatedSalesLine?.updatedAt ?? new Date(),
+    });
+  }
+
+  return updatedSalesLine;
 }
 
 export async function deleteSalesLineService(input: { id: string }) {
@@ -207,5 +233,11 @@ export async function deleteSalesLineService(input: { id: string }) {
     throw new Error("Sales line not found");
   }
 
-  return softDeleteSalesLine(input.id);
+  const deletedSalesLine = await softDeleteSalesLine(input.id);
+
+  await markInvoicesNeedsReviewBySources({
+    salesLineIds: [input.id],
+  });
+
+  return deletedSalesLine;
 }

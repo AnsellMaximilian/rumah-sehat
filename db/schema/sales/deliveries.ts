@@ -1,4 +1,5 @@
 import {
+  boolean,
   doublePrecision,
   integer,
   pgTable,
@@ -47,6 +48,24 @@ export const deliveryItems = pgTable("delivery_items", {
   quantity: doublePrecision("quantity").notNull(),
   unitSellPrice: integer("unit_sell_price"),
   sourceMode: varchar("source_mode", { length: 32 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const deliveryCharges = pgTable("delivery_charges", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  deliveryId: uuid("delivery_id")
+    .notNull()
+    .references(() => deliveries.id, { onDelete: "cascade" }),
+  chargeType: varchar("charge_type", { length: 32 }).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: integer("amount").notNull(),
+  billToCustomer: boolean("bill_to_customer").notNull().default(true),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

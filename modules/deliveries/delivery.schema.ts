@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DELIVERY_STATUSES } from "./delivery.types";
+import { DELIVERY_DIRECT_SOURCE_MODES, DELIVERY_STATUSES } from "./delivery.types";
 
 function nullableText(max: number, label: string) {
   return z
@@ -26,10 +26,67 @@ function nullableDateTime(label: string) {
   );
 }
 
-const DeliveryItemSchema = z.object({
+function nullableWholeNumber(label: string) {
+  return z.preprocess(
+    (value) => {
+      if (typeof value === "string" && value.trim() === "") {
+        return null;
+      }
+
+      return value;
+    },
+    z.union([
+      z.coerce.number().int(`${label} must be a whole number`),
+      z.null(),
+    ]),
+  );
+}
+
+const ExistingDeliveryItemSchema = z.object({
+  itemMode: z.literal("existing"),
   salesLineId: z.string().uuid("Sales line is required"),
+  productId: z.string().optional(),
+  quantity: z.string().optional(),
+  unitSellPrice: z.string().optional(),
+  sourceMode: z.string().optional(),
   notes: nullableText(500, "Item notes"),
 });
+
+const DirectDeliveryItemSchema = z.object({
+  itemMode: z.literal("direct"),
+  salesLineId: z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized || null;
+      }
+
+      return value;
+    },
+    z.union([z.string().uuid("Sales line is invalid"), z.null()]),
+  ),
+  productId: z.string().uuid("Product is required"),
+  quantity: z.preprocess(
+    (value) => {
+      if (typeof value === "string" && value.trim() === "") {
+        return undefined;
+      }
+
+      return value;
+    },
+    z.coerce.number().positive("Quantity must be greater than 0"),
+  ),
+  unitSellPrice: nullableWholeNumber("Sell price"),
+  sourceMode: z.enum(DELIVERY_DIRECT_SOURCE_MODES, {
+    error: () => ({ message: "Source mode is required" }),
+  }),
+  notes: nullableText(500, "Item notes"),
+});
+
+const DeliveryItemSchema = z.discriminatedUnion("itemMode", [
+  ExistingDeliveryItemSchema,
+  DirectDeliveryItemSchema,
+]);
 
 const DeliveryBaseSchema = z.object({
   customerId: z.string().uuid("Customer is required"),
@@ -55,7 +112,12 @@ const DeliveryBaseSchema = z.object({
     .array(DeliveryItemSchema)
     .min(1, "At least one delivery item is required")
     .refine(
-      (items) => new Set(items.map((item) => item.salesLineId)).size === items.length,
+      (items) =>
+        new Set(
+          items
+            .filter((item) => item.itemMode === "existing")
+            .map((item) => item.salesLineId),
+        ).size === items.filter((item) => item.itemMode === "existing").length,
       "Each sales line can only appear once in a delivery",
     ),
 });

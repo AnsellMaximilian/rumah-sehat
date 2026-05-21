@@ -14,7 +14,12 @@ import {
   DeliveryState,
   updateDeliveryAction,
 } from "@/app/dashboard/deliveries/actions";
-import { DeliveryDetail, DELIVERY_STATUSES } from "@/modules/deliveries/delivery.types";
+import {
+  DeliveryDetail,
+  DELIVERY_DIRECT_SOURCE_MODES,
+  DELIVERY_STATUSES,
+} from "@/modules/deliveries/delivery.types";
+import { ProductSelectOption } from "@/modules/products/product.types";
 import { SalesLineSelectOption } from "@/modules/sales-lines/sales-line.types";
 
 const STATUS_LABELS: Record<(typeof DELIVERY_STATUSES)[number], string> = {
@@ -25,7 +30,12 @@ const STATUS_LABELS: Record<(typeof DELIVERY_STATUSES)[number], string> = {
 
 function createEmptyItem(): DeliveryItemFormValues {
   return {
+    itemMode: "existing",
     salesLineId: "",
+    productId: "",
+    quantity: "",
+    unitSellPrice: "",
+    sourceMode: "stock",
     notes: "",
   };
 }
@@ -43,10 +53,12 @@ function formatDateTimeLocal(value: Date) {
 export default function DeliveryForm({
   customers,
   delivery,
+  productOptions,
   salesLineOptions,
 }: {
   customers: CustomerSelectOption[];
   delivery?: DeliveryDetail;
+  productOptions: ProductSelectOption[];
   salesLineOptions: SalesLineSelectOption[];
 }) {
   const initialState: DeliveryState = {
@@ -65,7 +77,14 @@ export default function DeliveryForm({
           items:
             delivery.items.length > 0
               ? delivery.items.map((item) => ({
+                  itemMode:
+                    item.salesLineSourceDeliveryId === delivery.id ? "direct" : "existing",
                   salesLineId: item.salesLineId ?? "",
+                  productId: item.productId,
+                  quantity: String(item.quantity),
+                  unitSellPrice:
+                    item.unitSellPrice === null ? "" : String(item.unitSellPrice),
+                  sourceMode: item.sourceMode,
                   notes: item.notes ?? "",
                 }))
               : [createEmptyItem()],
@@ -99,6 +118,42 @@ export default function DeliveryForm({
       currentItems.map((item, itemIndex) =>
         itemIndex === index ? { ...item, [field]: value } : item,
       ),
+    );
+  }
+
+  function changeItemMode(index: number, nextMode: string) {
+    setItems((currentItems) =>
+      currentItems.map((item, itemIndex) => {
+        if (itemIndex !== index) {
+          return item;
+        }
+
+        if (nextMode === item.itemMode) {
+          return item;
+        }
+
+        if (nextMode === "direct") {
+          return {
+            ...item,
+            itemMode: "direct",
+            salesLineId: "",
+            productId: "",
+            quantity: "",
+            unitSellPrice: "",
+            sourceMode: "stock",
+          };
+        }
+
+        return {
+          ...item,
+          itemMode: "existing",
+          salesLineId: "",
+          productId: "",
+          quantity: "",
+          unitSellPrice: "",
+          sourceMode: "stock",
+        };
+      }),
     );
   }
 
@@ -264,28 +319,133 @@ export default function DeliveryForm({
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium">
-                    Sales Line
+                    Item Type
                   </label>
                   <select
-                    name="itemSalesLineId"
+                    name="itemMode"
                     className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
-                    value={item.salesLineId}
-                    onChange={(event) =>
-                      updateItem(index, "salesLineId", event.target.value)
-                    }
+                    value={item.itemMode}
+                    onChange={(event) => changeItemMode(index, event.target.value)}
                   >
-                    <option value="">Select sales line</option>
-                    {salesLineOptions.map((salesLine) => (
-                      <option key={salesLine.id} value={salesLine.id}>
-                        {salesLine.customerCode} - {salesLine.customerName} |{" "}
-                        {salesLine.productCode
-                          ? `${salesLine.productCode} - ${salesLine.productName}`
-                          : salesLine.productName}{" "}
-                        | Qty {salesLine.quantity} | {salesLine.status}
-                      </option>
-                    ))}
+                    <option value="existing">Use existing sales line</option>
+                    <option value="direct">Create from this delivery</option>
                   </select>
                 </div>
+
+                {item.itemMode === "existing" ? (
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm font-medium">
+                      Sales Line
+                    </label>
+                    <select
+                      name="itemSalesLineId"
+                      className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+                      value={item.salesLineId}
+                      onChange={(event) =>
+                        updateItem(index, "salesLineId", event.target.value)
+                      }
+                    >
+                      <option value="">Select sales line</option>
+                      {salesLineOptions.map((salesLine) => (
+                        <option key={salesLine.id} value={salesLine.id}>
+                          {salesLine.customerCode} - {salesLine.customerName} |{" "}
+                          {salesLine.productCode
+                            ? `${salesLine.productCode} - ${salesLine.productName}`
+                            : salesLine.productName}{" "}
+                          | Qty {salesLine.quantity} | {salesLine.status}
+                        </option>
+                      ))}
+                    </select>
+                    <input type="hidden" name="itemProductId" value="" />
+                    <input type="hidden" name="itemQuantity" value="" />
+                    <input type="hidden" name="itemUnitSellPrice" value="" />
+                    <input type="hidden" name="itemSourceMode" value="" />
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="hidden"
+                      name="itemSalesLineId"
+                      value={item.salesLineId}
+                    />
+                    <div className="md:col-span-2">
+                      <label className="mb-2 block text-sm font-medium">
+                        Product
+                      </label>
+                      <select
+                        name="itemProductId"
+                        className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+                        value={item.productId}
+                        onChange={(event) =>
+                          updateItem(index, "productId", event.target.value)
+                        }
+                      >
+                        <option value="">Select product</option>
+                        {productOptions.map((product) => (
+                          <option key={product.id} value={product.id}>
+                            {product.productCode
+                              ? `${product.productCode} - ${product.name}`
+                              : product.name}
+                            {!product.active ? " (inactive)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">
+                        Quantity
+                      </label>
+                      <Input
+                        name="itemQuantity"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(index, "quantity", event.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">
+                        Sell Price <span className="text-muted-foreground">(optional)</span>
+                      </label>
+                      <Input
+                        name="itemUnitSellPrice"
+                        type="number"
+                        min="0"
+                        step="1"
+                        inputMode="numeric"
+                        value={item.unitSellPrice}
+                        onChange={(event) =>
+                          updateItem(index, "unitSellPrice", event.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="mb-2 block text-sm font-medium">
+                        Source Mode
+                      </label>
+                      <select
+                        name="itemSourceMode"
+                        className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+                        value={item.sourceMode}
+                        onChange={(event) =>
+                          updateItem(index, "sourceMode", event.target.value)
+                        }
+                      >
+                        {DELIVERY_DIRECT_SOURCE_MODES.map((sourceMode) => (
+                          <option key={sourceMode} value={sourceMode}>
+                            {sourceMode === "stock" ? "Stock" : "Manual"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
 
                 <div className="md:col-span-2">
                   <label className="mb-2 block text-sm font-medium">
