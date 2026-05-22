@@ -16,6 +16,7 @@ import {
   customers,
   products,
   salesLines,
+  supplierPurchaseAllocations,
   supplierPurchaseItems,
   supplierPurchases,
   suppliers,
@@ -140,6 +141,53 @@ async function syncGeneratedSalesLines(
   const affectedSalesLineIds = new Set<string>();
   const deliveredSalesLineCustomerIds = new Set<string>();
 
+  async function softDeleteAllocationsForSalesLine(salesLineId: string) {
+    await tx
+      .update(supplierPurchaseAllocations)
+      .set({
+        deletedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(supplierPurchaseAllocations.salesLineId, salesLineId),
+          isNull(supplierPurchaseAllocations.deletedAt),
+        ),
+      );
+  }
+
+  async function upsertAllocation(input: {
+    allocatedQuantity: number;
+    salesLineId: string;
+    supplierPurchaseItemId: string;
+  }) {
+    const [updatedAllocation] = await tx
+      .update(supplierPurchaseAllocations)
+      .set({
+        allocatedQuantity: input.allocatedQuantity,
+        deletedAt: null,
+      })
+      .where(
+        and(
+          eq(supplierPurchaseAllocations.salesLineId, input.salesLineId),
+          eq(
+            supplierPurchaseAllocations.supplierPurchaseItemId,
+            input.supplierPurchaseItemId,
+          ),
+        ),
+      )
+      .returning();
+
+    if (updatedAllocation) {
+      return;
+    }
+
+    await tx.insert(supplierPurchaseAllocations).values({
+      allocatedQuantity: input.allocatedQuantity,
+      salesLineId: input.salesLineId,
+      supplierPurchaseItemId: input.supplierPurchaseItemId,
+    });
+  }
+
   for (const existingGeneratedSalesLine of existingGeneratedSalesLines) {
     const sourceItemId = existingGeneratedSalesLine.sourceSupplierPurchaseItemId;
 
@@ -154,6 +202,7 @@ async function syncGeneratedSalesLines(
       .returning();
 
     if (deletedSalesLine) {
+      await softDeleteAllocationsForSalesLine(deletedSalesLine.id);
       affectedSalesLineIds.add(deletedSalesLine.id);
     }
   }
@@ -180,6 +229,11 @@ async function syncGeneratedSalesLines(
         .returning();
 
       if (createdSalesLine) {
+        await upsertAllocation({
+          allocatedQuantity: item.quantity,
+          salesLineId: createdSalesLine.id,
+          supplierPurchaseItemId: item.id,
+        });
         affectedSalesLineIds.add(createdSalesLine.id);
 
         if (createdSalesLine.status === "delivered") {
@@ -212,6 +266,11 @@ async function syncGeneratedSalesLines(
       .returning();
 
     if (updatedSalesLine) {
+      await upsertAllocation({
+        allocatedQuantity: item.quantity,
+        salesLineId: updatedSalesLine.id,
+        supplierPurchaseItemId: item.id,
+      });
       affectedSalesLineIds.add(updatedSalesLine.id);
 
       if (updatedSalesLine.status === "delivered") {
@@ -342,6 +401,40 @@ export async function getSupplierPurchaseItems(supplierPurchaseId: string) {
     .leftJoin(customers, eq(supplierPurchaseItems.customerId, customers.id))
     .where(eq(supplierPurchaseItems.supplierPurchaseId, supplierPurchaseId))
     .orderBy(asc(supplierPurchaseItems.createdAt));
+}
+
+
+export async function getSupplierPurchaseAllocations(supplierPurchaseId: string) {
+  const allocationColumns = getTableColumns(supplierPurchaseAllocations);
+
+  return db
+    .select({
+      ...allocationColumns,
+      salesLineQuantity: salesLines.quantity,
+      salesLineStatus: salesLines.status,
+      salesLineSourceMode: salesLines.sourceMode,
+      customerId: customers.id,
+      customerName: customers.name,
+      customerCode: customers.customerCode,
+      productId: products.id,
+      productName: products.name,
+      productCode: products.productCode,
+    })
+    .from(supplierPurchaseAllocations)
+    .innerJoin(
+      supplierPurchaseItems,
+      eq(supplierPurchaseAllocations.supplierPurchaseItemId, supplierPurchaseItems.id),
+    )
+    .leftJoin(salesLines, eq(supplierPurchaseAllocations.salesLineId, salesLines.id))
+    .leftJoin(customers, eq(salesLines.customerId, customers.id))
+    .leftJoin(products, eq(salesLines.productId, products.id))
+    .where(
+      and(
+        eq(supplierPurchaseItems.supplierPurchaseId, supplierPurchaseId),
+        isNull(supplierPurchaseAllocations.deletedAt),
+      ),
+    )
+    .orderBy(asc(supplierPurchaseAllocations.createdAt));
 }
 
 export async function getSupplierPurchaseByReferenceNumber(

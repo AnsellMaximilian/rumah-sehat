@@ -4,6 +4,7 @@ import DetailCard from "@/components/layout/detail-card";
 import DetailList from "@/components/details/detail-list";
 import DetailItem from "@/components/details/detail-item";
 import { Badge } from "@/components/ui/badge";
+import StockMovementForm from "./components/stock-movement-form";
 import { formatQuantity, formatRupiah } from "@/lib/utils";
 import {
   getProductService,
@@ -110,7 +111,12 @@ export default async function Page({ params }: ProductDetailPageProps) {
         </div>
 
         {product.trackStock ? (
-          <DetailCard title="Stock Movement History">
+          <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+            <DetailCard title="Add Stock Movement">
+              <StockMovementForm productId={product.id} />
+            </DetailCard>
+
+            <DetailCard title="Stock Movement History">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -148,7 +154,8 @@ export default async function Page({ params }: ProductDetailPageProps) {
                 )}
               </TableBody>
             </Table>
-          </DetailCard>
+            </DetailCard>
+          </div>
         ) : null}
       </div>
     </PageSection>

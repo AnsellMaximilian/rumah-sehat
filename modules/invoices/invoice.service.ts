@@ -1,6 +1,7 @@
 import { PaginatedResult } from "@/types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { getAuthContext } from "@/modules/auth/auth.service";
+import { logEntityCreated } from "@/modules/change-logs/change-log.service";
 import { getCustomer } from "@/modules/customers/customer.repository";
 import {
   getBillableDeliveryChargesForPreview,
@@ -13,6 +14,7 @@ import {
   getInvoiceItems,
   getPaginatedInvoices,
   insertInvoice,
+  insertInvoiceItem,
   markInvoicesNeedsReviewByCustomerDate,
   markInvoicesNeedsReviewBySources,
   replaceInvoiceItems,
@@ -39,6 +41,15 @@ type InvoiceCreateInput = {
   notes: string | null;
 };
 
+type ManualInvoiceItemInput = {
+  invoiceId: string;
+  lineType: string;
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  amount: number;
+};
+
 type InvoiceUpdateInput = {
   invoiceNumber: string | null;
   invoiceDate: string;
@@ -61,6 +72,18 @@ function normalizeInvoiceCreateInput(input: InvoiceCreateInput) {
     invoiceDate: input.invoiceDate,
     invoiceNumber: normalizeOptionalText(input.invoiceNumber),
     notes: normalizeOptionalText(input.notes),
+  };
+}
+
+
+function normalizeManualInvoiceItemInput(input: ManualInvoiceItemInput) {
+  return {
+    invoiceId: input.invoiceId,
+    lineType: input.lineType,
+    description: input.description.trim(),
+    quantity: input.quantity,
+    unitPrice: input.unitPrice,
+    amount: input.amount,
   };
 }
 
@@ -472,6 +495,46 @@ export async function createInvoiceService(input: InvoiceCreateInput) {
       })),
     ],
   });
+}
+
+
+export async function createManualInvoiceItemService(input: ManualInvoiceItemInput) {
+  const auth = await getAuthContext();
+
+  await auth.require("update", "invoices");
+
+  const normalizedInput = normalizeManualInvoiceItemInput(input);
+  const invoice = await getInvoice(normalizedInput.invoiceId);
+
+  if (!invoice) {
+    throw new Error("Invoice not found");
+  }
+
+  if (invoice.status === "void") {
+    throw new Error("Void invoices cannot receive manual items");
+  }
+
+  const invoiceItem = await insertInvoiceItem({
+    invoiceId: normalizedInput.invoiceId,
+    lineType: normalizedInput.lineType,
+    description: normalizedInput.description,
+    productId: null,
+    quantity: normalizedInput.quantity,
+    unitPrice: normalizedInput.unitPrice,
+    amount: normalizedInput.amount,
+    sourceType: "manual",
+    sourceId: null,
+  });
+
+  await logEntityCreated({
+    changedBy: auth.user.id,
+    entity: invoiceItem,
+    entityId: invoiceItem.id,
+    entityType: "invoice_item",
+    reason: `Manual item added to invoice ${invoice.invoiceNumber || invoice.id}`,
+  });
+
+  return invoiceItem;
 }
 
 export async function updateInvoiceService(input: InvoiceUpdateInput & { id: string }) {

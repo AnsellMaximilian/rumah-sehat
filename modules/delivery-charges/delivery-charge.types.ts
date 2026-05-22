@@ -19,10 +19,14 @@ export type DeliveryCharge = {
   customerId: string | null;
   customerCode: string | null;
   customerName: string | null;
+  accountId: string | null;
+  accountEntryId: string | null;
+  accountName: string | null;
   chargeType: string;
   description: string;
   amount: number;
   billToCustomer: boolean;
+  invoiceItemId: string | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;

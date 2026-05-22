@@ -1,7 +1,13 @@
 import { PaginatedResult } from "@/types";
 import { buildPagination, normalizeListSort } from "@/lib/utils";
 import { getAuthContext } from "@/modules/auth/auth.service";
+import { getAccount } from "@/modules/accounts/account.repository";
 import { getDelivery } from "@/modules/deliveries/delivery.repository";
+import {
+  logEntityCreated,
+  logEntityDeleted,
+  logEntityUpdated,
+} from "@/modules/change-logs/change-log.service";
 import {
   markInvoicesNeedsReviewBySources,
   markInvoicesNeedsReviewForCustomerDate,
@@ -27,6 +33,7 @@ type DeliveryChargeMutationInput = {
   description: string;
   amount: number;
   billToCustomer: boolean;
+  accountId: string | null;
   notes: string | null;
 };
 
@@ -43,6 +50,7 @@ function normalizeDeliveryChargeInput(input: DeliveryChargeMutationInput) {
     description: input.description.trim(),
     amount: input.amount,
     billToCustomer: input.billToCustomer,
+    accountId: normalizeOptionalText(input.accountId),
     notes: normalizeOptionalText(input.notes),
   };
 }
@@ -55,6 +63,20 @@ async function ensureDeliveryExists(deliveryId: string) {
   }
 
   return delivery;
+}
+
+async function ensureAccountExists(accountId: string | null) {
+  if (!accountId) {
+    return null;
+  }
+
+  const account = await getAccount(accountId);
+
+  if (!account) {
+    throw new Error("Account not found");
+  }
+
+  return account;
 }
 
 export async function getDeliveryChargesService(
@@ -122,7 +144,18 @@ export async function createDeliveryChargeService(input: DeliveryChargeMutationI
   const normalizedInput = normalizeDeliveryChargeInput(input);
 
   const delivery = await ensureDeliveryExists(normalizedInput.deliveryId);
-  const createdDeliveryCharge = await insertDeliveryCharge(normalizedInput);
+  await ensureAccountExists(normalizedInput.accountId);
+  const createdDeliveryCharge = await insertDeliveryCharge({
+    ...normalizedInput,
+    createdBy: auth.user.id,
+  });
+
+  await logEntityCreated({
+    changedBy: auth.user.id,
+    entity: createdDeliveryCharge,
+    entityId: createdDeliveryCharge.id,
+    entityType: "delivery_charge",
+  });
 
   if (normalizedInput.billToCustomer && delivery.status === "delivered") {
     await markInvoicesNeedsReviewForCustomerDate({
@@ -150,8 +183,31 @@ export async function updateDeliveryChargeService(
   const normalizedInput = normalizeDeliveryChargeInput(input);
 
   const delivery = await ensureDeliveryExists(normalizedInput.deliveryId);
+  await ensureAccountExists(normalizedInput.accountId);
 
-  const updatedDeliveryCharge = await updateDeliveryCharge(input.id, normalizedInput);
+  const updatedDeliveryCharge = await updateDeliveryCharge(input.id, {
+    ...normalizedInput,
+    createdBy: auth.user.id,
+  });
+
+  if (updatedDeliveryCharge) {
+    await logEntityUpdated({
+      after: updatedDeliveryCharge,
+      before: deliveryCharge,
+      changedBy: auth.user.id,
+      entityId: input.id,
+      entityType: "delivery_charge",
+      fields: [
+        "deliveryId",
+        "chargeType",
+        "description",
+        "amount",
+        "billToCustomer",
+        "accountId",
+        "notes",
+      ],
+    });
+  }
 
   await markInvoicesNeedsReviewBySources({
     deliveryChargeIds: [input.id],
@@ -178,7 +234,19 @@ export async function deleteDeliveryChargeService(input: { id: string }) {
     throw new Error("Delivery charge not found");
   }
 
-  const deletedDeliveryCharge = await softDeleteDeliveryCharge(input.id);
+  const deletedDeliveryCharge = await softDeleteDeliveryCharge({
+    createdBy: auth.user.id,
+    id: input.id,
+  });
+
+  if (deletedDeliveryCharge) {
+    await logEntityDeleted({
+      changedBy: auth.user.id,
+      entity: deliveryCharge,
+      entityId: input.id,
+      entityType: "delivery_charge",
+    });
+  }
 
   await markInvoicesNeedsReviewBySources({
     deliveryChargeIds: [input.id],

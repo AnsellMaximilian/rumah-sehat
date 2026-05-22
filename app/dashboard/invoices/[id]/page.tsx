@@ -16,6 +16,7 @@ import { formatRupiah } from "@/lib/utils";
 import { getInvoiceService } from "@/modules/invoices/invoice.service";
 import DraftInvoiceActions from "../components/draft-invoice-actions";
 import ReissueInvoiceActions from "../components/reissue-invoice-actions";
+import ManualInvoiceItemForm from "../components/manual-invoice-item-form";
 
 export default async function Page(props: PageProps<"/dashboard/invoices/[id]">) {
   const { id } = await props.params;
@@ -110,6 +111,12 @@ export default async function Page(props: PageProps<"/dashboard/invoices/[id]">)
             </DetailList>
           </DetailCard>
         </div>
+
+        {invoice.status !== "void" ? (
+          <DetailCard title="Manual Adjustment / Misc Charge">
+            <ManualInvoiceItemForm invoiceId={invoice.id} />
+          </DetailCard>
+        ) : null}
 
         <DetailCard title="Invoice Items">
           <Table>

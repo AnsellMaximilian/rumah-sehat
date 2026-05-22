@@ -17,6 +17,7 @@ import {
   DeliveryCharge,
 } from "@/modules/delivery-charges/delivery-charge.types";
 import { DeliverySelectOption } from "@/modules/deliveries/delivery.types";
+import { AccountSelectOption } from "@/modules/accounts/account.types";
 
 const CHARGE_TYPE_LABELS: Record<(typeof DELIVERY_CHARGE_TYPES)[number], string> = {
   courier: "Courier",
@@ -42,9 +43,11 @@ function formatDeliveryOptionLabel(delivery: DeliverySelectOption) {
 
 export default function DeliveryChargeForm({
   deliveryCharge,
+  accountOptions,
   deliveryOptions,
 }: {
   deliveryCharge?: DeliveryCharge;
+  accountOptions: AccountSelectOption[];
   deliveryOptions: DeliverySelectOption[];
 }) {
   const initialState: DeliveryChargeState = {
@@ -57,6 +60,7 @@ export default function DeliveryChargeForm({
           description: deliveryCharge.description,
           amount: String(deliveryCharge.amount),
           billToCustomer: deliveryCharge.billToCustomer ? "true" : "false",
+          accountId: deliveryCharge.accountId ?? "",
           notes: deliveryCharge.notes ?? "",
         }
       : {
@@ -65,6 +69,7 @@ export default function DeliveryChargeForm({
           description: "",
           amount: "",
           billToCustomer: "true",
+          accountId: "",
           notes: "",
         },
   };
@@ -153,6 +158,33 @@ export default function DeliveryChargeForm({
           <FormError
             errorField={state.errors?.billToCustomer?.errors}
             errorId="billToCustomer-error"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="accountId" className="mb-2 block text-sm font-medium">
+            Deduct From Account <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <select
+            id="accountId"
+            name="accountId"
+            className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+            defaultValue={state.values.accountId}
+            aria-describedby="accountId-error accountId-help"
+          >
+            <option value="">No account deduction</option>
+            {accountOptions.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} ({account.type.replaceAll("_", " ")})
+              </option>
+            ))}
+          </select>
+          <p id="accountId-help" className="mt-1 text-xs text-muted-foreground">
+            Use this for staff cash or delivery wallet charges.
+          </p>
+          <FormError
+            errorField={state.errors?.accountId?.errors}
+            errorId="accountId-error"
           />
         </div>
 

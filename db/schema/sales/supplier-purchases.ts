@@ -29,6 +29,7 @@ export const supplierPurchases = pgTable("supplier_purchases", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const supplierPurchaseItems = pgTable("supplier_purchase_items", {
@@ -51,4 +52,5 @@ export const supplierPurchaseItems = pgTable("supplier_purchase_items", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  deletedAt: timestamp("deleted_at"),
 });

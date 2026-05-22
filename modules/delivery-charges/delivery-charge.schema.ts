@@ -30,6 +30,20 @@ function booleanString(label: string) {
     .transform((value) => value === "true");
 }
 
+function nullableUuid(label: string) {
+  return z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized || null;
+      }
+
+      return value;
+    },
+    z.union([z.string().uuid(`${label} is invalid`), z.null()]),
+  );
+}
+
 const DeliveryChargeBaseObjectSchema = z.object({
   deliveryId: z.string().uuid("Delivery is required"),
   chargeType: z.enum(DELIVERY_CHARGE_TYPES, {
@@ -42,6 +56,7 @@ const DeliveryChargeBaseObjectSchema = z.object({
     .max(255, "Description must be less than 255 characters"),
   amount: requiredWholeNumber("Amount"),
   billToCustomer: booleanString("Bill to customer"),
+  accountId: nullableUuid("Account"),
   notes: nullableText(1000, "Notes"),
 });
 
@@ -70,6 +85,7 @@ export const UpdateDeliveryChargeSchema = z.object({
   description: DeliveryChargeBaseObjectSchema.shape.description.optional(),
   amount: DeliveryChargeBaseObjectSchema.shape.amount.optional(),
   billToCustomer: DeliveryChargeBaseObjectSchema.shape.billToCustomer.optional(),
+  accountId: DeliveryChargeBaseObjectSchema.shape.accountId.optional(),
   notes: DeliveryChargeBaseObjectSchema.shape.notes.optional(),
 });
 

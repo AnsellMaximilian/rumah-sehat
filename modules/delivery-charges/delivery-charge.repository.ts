@@ -10,7 +10,7 @@ import {
   or,
 } from "drizzle-orm";
 import { db } from "@/db/drizzle";
-import { customers, deliveries, deliveryCharges } from "@/db/schema";
+import { accountEntries, accounts, customers, deliveries, deliveryCharges } from "@/db/schema";
 import {
   DeliveryChargeSortBy,
   DeliveryChargeSortOrder,
@@ -22,7 +22,19 @@ type DeliveryChargeMutationInput = {
   description: string;
   amount: number;
   billToCustomer: boolean;
+  accountId: string | null;
+  createdBy: string;
   notes: string | null;
+};
+
+type DeliveryChargeAccountEntryInput = {
+  accountId: string;
+  amount: number;
+  chargeId: string;
+  createdBy: string;
+  description: string;
+  entryType: "delivery_charge" | "delivery_charge_reversal";
+  occurredAt: Date;
 };
 
 function getDeliveryChargeOrderBy(
@@ -67,10 +79,12 @@ function buildBaseDeliveryChargeQuery() {
       customerId: customers.id,
       customerCode: customers.customerCode,
       customerName: customers.name,
+      accountName: accounts.name,
     })
     .from(deliveryCharges)
     .innerJoin(deliveries, eq(deliveryCharges.deliveryId, deliveries.id))
-    .leftJoin(customers, eq(deliveries.customerId, customers.id));
+    .leftJoin(customers, eq(deliveries.customerId, customers.id))
+    .leftJoin(accounts, eq(deliveryCharges.accountId, accounts.id));
 }
 
 function buildActiveDeliveryChargeFilter(query?: string) {
@@ -140,12 +154,42 @@ export async function getDeliveryChargesByDelivery(deliveryId: string) {
 }
 
 export async function insertDeliveryCharge(input: DeliveryChargeMutationInput) {
-  const [deliveryCharge] = await db
-    .insert(deliveryCharges)
-    .values(input)
-    .returning();
+  return db.transaction(async (tx) => {
+    const [deliveryCharge] = await tx
+      .insert(deliveryCharges)
+      .values({
+        accountId: input.accountId,
+        amount: input.amount,
+        billToCustomer: input.billToCustomer,
+        chargeType: input.chargeType,
+        deliveryId: input.deliveryId,
+        description: input.description,
+        notes: input.notes,
+      })
+      .returning();
 
-  return deliveryCharge;
+    if (!deliveryCharge.accountId) {
+      return deliveryCharge;
+    }
+
+    const accountEntry = await insertDeliveryChargeAccountEntry(tx, {
+      accountId: deliveryCharge.accountId,
+      amount: deliveryCharge.amount,
+      chargeId: deliveryCharge.id,
+      createdBy: input.createdBy,
+      description: deliveryCharge.description,
+      entryType: "delivery_charge",
+      occurredAt: new Date(),
+    });
+
+    const [updatedDeliveryCharge] = await tx
+      .update(deliveryCharges)
+      .set({ accountEntryId: accountEntry.id })
+      .where(eq(deliveryCharges.id, deliveryCharge.id))
+      .returning();
+
+    return updatedDeliveryCharge;
+  });
 }
 
 export async function updateDeliveryCharge(
@@ -161,23 +205,128 @@ export async function updateDeliveryCharge(
   if (input.billToCustomer !== undefined) {
     updateData.billToCustomer = input.billToCustomer;
   }
+  if (input.accountId !== undefined) updateData.accountId = input.accountId;
   if (input.notes !== undefined) updateData.notes = input.notes;
 
-  const [deliveryCharge] = await db
-    .update(deliveryCharges)
-    .set(updateData)
-    .where(eq(deliveryCharges.id, id))
-    .returning();
+  return db.transaction(async (tx) => {
+    const [existingDeliveryCharge] = await tx
+      .select()
+      .from(deliveryCharges)
+      .where(and(eq(deliveryCharges.id, id), isNull(deliveryCharges.deletedAt)));
 
-  return deliveryCharge;
+    if (!existingDeliveryCharge) {
+      return undefined;
+    }
+
+    const [deliveryCharge] = await tx
+      .update(deliveryCharges)
+      .set(updateData)
+      .where(eq(deliveryCharges.id, id))
+      .returning();
+
+    const accountImpactChanged =
+      existingDeliveryCharge.accountId !== deliveryCharge.accountId ||
+      existingDeliveryCharge.amount !== deliveryCharge.amount;
+
+    if (!accountImpactChanged) {
+      return deliveryCharge;
+    }
+
+    if (existingDeliveryCharge.accountId) {
+      await insertDeliveryChargeAccountEntry(tx, {
+        accountId: existingDeliveryCharge.accountId,
+        amount: -existingDeliveryCharge.amount,
+        chargeId: existingDeliveryCharge.id,
+        createdBy: input.createdBy ?? "",
+        description: `Reverse ${existingDeliveryCharge.description}`,
+        entryType: "delivery_charge_reversal",
+        occurredAt: new Date(),
+      });
+    }
+
+    if (!deliveryCharge.accountId) {
+      const [updatedDeliveryCharge] = await tx
+        .update(deliveryCharges)
+        .set({ accountEntryId: null })
+        .where(eq(deliveryCharges.id, deliveryCharge.id))
+        .returning();
+
+      return updatedDeliveryCharge;
+    }
+
+    const accountEntry = await insertDeliveryChargeAccountEntry(tx, {
+      accountId: deliveryCharge.accountId,
+      amount: deliveryCharge.amount,
+      chargeId: deliveryCharge.id,
+      createdBy: input.createdBy ?? "",
+      description: deliveryCharge.description,
+      entryType: "delivery_charge",
+      occurredAt: new Date(),
+    });
+
+    const [updatedDeliveryCharge] = await tx
+      .update(deliveryCharges)
+      .set({ accountEntryId: accountEntry.id })
+      .where(eq(deliveryCharges.id, deliveryCharge.id))
+      .returning();
+
+    return updatedDeliveryCharge;
+  });
 }
 
-export async function softDeleteDeliveryCharge(id: string) {
-  const [deliveryCharge] = await db
-    .update(deliveryCharges)
-    .set({ deletedAt: new Date() })
-    .where(and(eq(deliveryCharges.id, id), isNull(deliveryCharges.deletedAt)))
+export async function softDeleteDeliveryCharge(input: {
+  createdBy: string;
+  id: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [existingDeliveryCharge] = await tx
+      .select()
+      .from(deliveryCharges)
+      .where(and(eq(deliveryCharges.id, input.id), isNull(deliveryCharges.deletedAt)));
+
+    if (!existingDeliveryCharge) {
+      return undefined;
+    }
+
+    const [deliveryCharge] = await tx
+      .update(deliveryCharges)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(deliveryCharges.id, input.id), isNull(deliveryCharges.deletedAt)))
+      .returning();
+
+    if (existingDeliveryCharge.accountId) {
+      await insertDeliveryChargeAccountEntry(tx, {
+        accountId: existingDeliveryCharge.accountId,
+        amount: -existingDeliveryCharge.amount,
+        chargeId: existingDeliveryCharge.id,
+        createdBy: input.createdBy,
+        description: `Reverse ${existingDeliveryCharge.description}`,
+        entryType: "delivery_charge_reversal",
+        occurredAt: new Date(),
+      });
+    }
+
+    return deliveryCharge;
+  });
+}
+
+async function insertDeliveryChargeAccountEntry(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  input: DeliveryChargeAccountEntryInput,
+) {
+  const [accountEntry] = await tx
+    .insert(accountEntries)
+    .values({
+      accountId: input.accountId,
+      amountDelta: -input.amount,
+      createdBy: input.createdBy,
+      description: input.description,
+      entryType: input.entryType,
+      occurredAt: input.occurredAt,
+      sourceId: input.chargeId,
+      sourceType: "delivery_charge",
+    })
     .returning();
 
-  return deliveryCharge;
+  return accountEntry;
 }

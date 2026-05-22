@@ -9,6 +9,7 @@ import {
 import { getProduct } from "@/modules/products/product.repository";
 import { getSalesLine } from "@/modules/sales-lines/sales-line.repository";
 import { getSupplier } from "@/modules/suppliers/supplier.repository";
+import { getDeliveryType } from "@/modules/delivery-types/delivery-type.repository";
 import {
   getActiveDeliveryItemsBySalesLineIds,
   getAllDeliveries,
@@ -50,6 +51,7 @@ type DeliveryMutationInput = {
   deliveredAt: Date | null;
   recordedAt: Date;
   deliveredBy: string | null;
+  deliveryTypeId: string | null;
   status: string;
   notes: string | null;
   items: DeliveryItemMutationInput[];
@@ -67,6 +69,7 @@ function normalizeDeliveryInput(input: DeliveryMutationInput) {
     deliveredAt: input.deliveredAt,
     recordedAt: input.recordedAt,
     deliveredBy: normalizeOptionalText(input.deliveredBy),
+    deliveryTypeId: normalizeOptionalText(input.deliveryTypeId),
     status: input.status,
     notes: normalizeOptionalText(input.notes),
     items: input.items.map((item) => ({
@@ -95,6 +98,18 @@ function getDeliveryEventDate(input: {
   recordedAt: Date;
 }) {
   return input.deliveredAt ?? input.recordedAt;
+}
+
+async function ensureDeliveryTypeExists(deliveryTypeId: string | null) {
+  if (!deliveryTypeId) {
+    return;
+  }
+
+  const deliveryType = await getDeliveryType(deliveryTypeId);
+
+  if (!deliveryType) {
+    throw new Error("Delivery type not found");
+  }
 }
 
 async function ensureCustomerExists(customerId: string) {
@@ -299,6 +314,7 @@ export async function createDeliveryService(input: DeliveryMutationInput) {
   );
 
   await ensureCustomerExists(normalizedInput.customerId);
+  await ensureDeliveryTypeExists(normalizedInput.deliveryTypeId);
   await ensureSalesLinesBelongToCustomer({
     customerId: normalizedInput.customerId,
     salesLineIds: existingItems.map((item) => item.salesLineId),
@@ -316,6 +332,7 @@ export async function createDeliveryService(input: DeliveryMutationInput) {
       deliveredAt: normalizedInput.deliveredAt,
       recordedAt: normalizedInput.recordedAt,
       deliveredBy: normalizedInput.deliveredBy,
+      deliveryTypeId: normalizedInput.deliveryTypeId,
       status: normalizedInput.status,
       notes: normalizedInput.notes,
       createdBy: auth.user.id,
@@ -363,6 +380,7 @@ export async function updateDeliveryService(
   );
 
   await ensureCustomerExists(normalizedInput.customerId);
+  await ensureDeliveryTypeExists(normalizedInput.deliveryTypeId);
   await ensureSalesLinesBelongToCustomer({
     customerId: normalizedInput.customerId,
     currentDeliverySalesLineIds: existingSalesLineIds,
@@ -383,6 +401,7 @@ export async function updateDeliveryService(
       deliveredAt: normalizedInput.deliveredAt,
       recordedAt: normalizedInput.recordedAt,
       deliveredBy: normalizedInput.deliveredBy,
+      deliveryTypeId: normalizedInput.deliveryTypeId,
       status: normalizedInput.status,
       notes: normalizedInput.notes,
     },

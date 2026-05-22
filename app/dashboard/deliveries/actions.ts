@@ -26,6 +26,7 @@ export type DeliveryFormValues = {
   deliveredAt: string;
   recordedAt: string;
   deliveredBy: string;
+  deliveryTypeId: string;
   status: string;
   notes: string;
   items: DeliveryItemFormValues[];
@@ -38,6 +39,7 @@ export type DeliveryState = {
       | "deliveredAt"
       | "recordedAt"
       | "deliveredBy"
+      | "deliveryTypeId"
       | "status"
       | "notes"
       | "items",
@@ -73,6 +75,7 @@ function getDeliveryValues(formData: FormData): DeliveryFormValues {
     deliveredAt: String(formData.get("deliveredAt") ?? ""),
     recordedAt: String(formData.get("recordedAt") ?? ""),
     deliveredBy: String(formData.get("deliveredBy") ?? ""),
+    deliveryTypeId: String(formData.get("deliveryTypeId") ?? ""),
     status: String(formData.get("status") ?? "recorded"),
     notes: String(formData.get("notes") ?? ""),
     items: Array.from({ length: itemCount }, (_, index) => ({
@@ -115,6 +118,7 @@ function mapValidationErrors(error: ZodError) {
       firstPath === "deliveredAt" ||
       firstPath === "recordedAt" ||
       firstPath === "deliveredBy" ||
+      firstPath === "deliveryTypeId" ||
       firstPath === "status" ||
       firstPath === "notes"
     ) {

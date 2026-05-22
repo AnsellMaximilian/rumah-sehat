@@ -13,6 +13,7 @@ import { getSupplier } from "@/modules/suppliers/supplier.repository";
 import {
   deleteSupplierPurchase,
   getSupplierPurchase,
+  getSupplierPurchaseAllocations,
   getSupplierPurchaseByReferenceNumber,
   getSupplierPurchaseCount,
   getSupplierPurchaseItems,
@@ -362,10 +363,14 @@ export async function getSupplierPurchaseService(input: {
     return null;
   }
 
-  const items = await getSupplierPurchaseItems(input.id);
+  const [allocations, items] = await Promise.all([
+    getSupplierPurchaseAllocations(input.id),
+    getSupplierPurchaseItems(input.id),
+  ]);
 
   return {
     ...supplierPurchase,
+    allocations,
     items,
   };
 }

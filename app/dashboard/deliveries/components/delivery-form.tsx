@@ -22,6 +22,7 @@ import {
 import { ProductSelectOption } from "@/modules/products/product.types";
 import { SalesLineSelectOption } from "@/modules/sales-lines/sales-line.types";
 import { SupplierSelectOption } from "@/modules/suppliers/supplier.types";
+import { DeliveryTypeSelectOption } from "@/modules/delivery-types/delivery-type.types";
 
 const STATUS_LABELS: Record<(typeof DELIVERY_STATUSES)[number], string> = {
   recorded: "Recorded",
@@ -55,12 +56,14 @@ function formatDateTimeLocal(value: Date) {
 export default function DeliveryForm({
   customers,
   delivery,
+  deliveryTypes,
   productOptions,
   salesLineOptions,
   suppliers,
 }: {
   customers: CustomerSelectOption[];
   delivery?: DeliveryDetail;
+  deliveryTypes: DeliveryTypeSelectOption[];
   productOptions: ProductSelectOption[];
   salesLineOptions: SalesLineSelectOption[];
   suppliers: SupplierSelectOption[];
@@ -76,6 +79,7 @@ export default function DeliveryForm({
             : "",
           recordedAt: formatDateTimeLocal(new Date(delivery.recordedAt)),
           deliveredBy: delivery.deliveredBy ?? "",
+          deliveryTypeId: delivery.deliveryTypeId ?? "",
           status: delivery.status,
           notes: delivery.notes ?? "",
           items:
@@ -99,6 +103,7 @@ export default function DeliveryForm({
           deliveredAt: "",
           recordedAt: formatDateTimeLocal(new Date()),
           deliveredBy: "",
+          deliveryTypeId: "",
           status: "recorded",
           notes: "",
           items: [createEmptyItem()],
@@ -263,7 +268,35 @@ export default function DeliveryForm({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div>
+          <label htmlFor="deliveryTypeId" className="mb-2 block text-sm font-medium">
+            Delivery Type <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <select
+            id="deliveryTypeId"
+            name="deliveryTypeId"
+            className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+            defaultValue={state.values.deliveryTypeId}
+            aria-describedby="deliveryTypeId-error deliveryTypeId-help"
+          >
+            <option value="">No delivery type</option>
+            {deliveryTypes.map((deliveryType) => (
+              <option key={deliveryType.id} value={deliveryType.id}>
+                {deliveryType.name}
+                {!deliveryType.active ? " (inactive)" : ""}
+              </option>
+            ))}
+          </select>
+          <p id="deliveryTypeId-help" className="mt-1 text-xs text-muted-foreground">
+            Stores the method/default profile for this delivery. Charges can still be overridden.
+          </p>
+          <FormError
+            errorField={state.errors.deliveryTypeId}
+            errorId="deliveryTypeId-error"
+          />
+        </div>
+
+        <div>
           <label htmlFor="deliveredBy" className="mb-2 block text-sm font-medium">
             Delivered By <span className="text-muted-foreground">(optional)</span>
           </label>

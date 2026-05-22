@@ -3,15 +3,20 @@ import DetailCard from "@/components/layout/detail-card";
 import DetailItem from "@/components/details/detail-item";
 import DetailList from "@/components/details/detail-list";
 import PageSection from "@/components/layout/page-section";
+import ChangeLogList from "@/components/details/change-log-list";
 import { Badge } from "@/components/ui/badge";
 import { formatRupiah } from "@/lib/utils";
 import { getDeliveryChargeService } from "@/modules/delivery-charges/delivery-charge.service";
+import { getEntityChangeLogsService } from "@/modules/change-logs/change-log.service";
 
 export default async function Page(
   props: PageProps<"/dashboard/delivery-charges/[id]">,
 ) {
   const { id } = await props.params;
-  const deliveryCharge = await getDeliveryChargeService({ id });
+  const [deliveryCharge, changeLogs] = await Promise.all([
+    getDeliveryChargeService({ id }),
+    getEntityChangeLogsService({ entityId: id, entityType: "delivery_charge" }),
+  ]);
 
   if (!deliveryCharge) {
     notFound();
@@ -71,11 +76,19 @@ export default async function Page(
               value={deliveryCharge.billToCustomer ? "Yes" : "No"}
             />
             <DetailItem
+              label="Account"
+              value={deliveryCharge.accountName || "-"}
+            />
+            <DetailItem
               label="Notes"
               value={deliveryCharge.notes || "-"}
               valueClassName="whitespace-pre-wrap"
             />
           </DetailList>
+        </DetailCard>
+
+        <DetailCard title="Change History">
+          <ChangeLogList logs={changeLogs} />
         </DetailCard>
       </div>
     </PageSection>

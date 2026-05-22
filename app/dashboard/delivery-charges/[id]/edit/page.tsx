@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import PageSection from "@/components/layout/page-section";
 import DeliveryChargeForm from "../../components/delivery-charge-form";
+import { getAllAccountsService } from "@/modules/accounts/account.service";
 import { getDeliveryChargeService } from "@/modules/delivery-charges/delivery-charge.service";
 import { getAllDeliveriesService } from "@/modules/deliveries/delivery.service";
+import { getAllDeliveryTypesService } from "@/modules/delivery-types/delivery-type.service";
 
 interface EditDeliveryChargePageProps {
   params: Promise<{
@@ -12,9 +14,11 @@ interface EditDeliveryChargePageProps {
 
 export default async function Page({ params }: EditDeliveryChargePageProps) {
   const { id } = await params;
-  const [deliveryCharge, deliveryOptions] = await Promise.all([
+  const [accountOptions, deliveryCharge, deliveryOptions, deliveryTypeOptions] = await Promise.all([
+    getAllAccountsService(),
     getDeliveryChargeService({ id }),
     getAllDeliveriesService(),
+    getAllDeliveryTypesService(),
   ]);
 
   if (!deliveryCharge) {
@@ -31,8 +35,10 @@ export default async function Page({ params }: EditDeliveryChargePageProps) {
       ]}
     >
       <DeliveryChargeForm
+        accountOptions={accountOptions}
         deliveryCharge={deliveryCharge}
         deliveryOptions={deliveryOptions}
+        deliveryTypeOptions={deliveryTypeOptions}
       />
     </PageSection>
   );

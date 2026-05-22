@@ -22,6 +22,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+
+function getAllocatedQuantityByItem(purchase: SupplierPurchaseDetail) {
+  const allocatedByItemId = new Map<string, number>();
+
+  for (const allocation of purchase.allocations) {
+    allocatedByItemId.set(
+      allocation.supplierPurchaseItemId,
+      (allocatedByItemId.get(allocation.supplierPurchaseItemId) ?? 0) +
+        allocation.allocatedQuantity,
+    );
+  }
+
+  return allocatedByItemId;
+}
+
 function getPurchaseGrandTotal(purchase: SupplierPurchaseDetail) {
   return purchase.items.reduce((total, item) => {
     if (item.unitCost === null) {
@@ -43,6 +58,7 @@ export default async function Page(
   }
 
   const grandTotal = getPurchaseGrandTotal(purchase);
+  const allocatedQuantityByItem = getAllocatedQuantityByItem(purchase);
 
   return (
     <PageSection
@@ -107,6 +123,7 @@ export default async function Page(
                 <TableHead>Workflow Effect</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Line Total</TableHead>
+                <TableHead>Allocated</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,6 +137,7 @@ export default async function Page(
                   destinationType: item.destinationType,
                   status: purchase.status,
                 });
+                const allocatedQuantity = allocatedQuantityByItem.get(item.id) ?? 0;
 
                 return (
                   <TableRow key={item.id}>
@@ -144,12 +162,67 @@ export default async function Page(
                     <TableCell>
                       {lineTotal === null ? "-" : formatRupiah(lineTotal)}
                     </TableCell>
+                    <TableCell>
+                      {allocatedQuantity > 0
+                        ? `${allocatedQuantity} / ${item.quantity}`
+                        : "-"}
+                    </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </DetailCard>
+
+        <DetailCard title="Allocations">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Purchase Item</TableHead>
+                <TableHead>Sales Line</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Allocated Qty</TableHead>
+                <TableHead>Sales Line Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {purchase.allocations.length > 0 ? (
+                purchase.allocations.map((allocation) => (
+                  <TableRow key={allocation.id}>
+                    <TableCell>
+                      {allocation.productCode
+                        ? `${allocation.productCode} - ${allocation.productName}`
+                        : allocation.productName || "-"}
+                    </TableCell>
+                    <TableCell>{allocation.salesLineId}</TableCell>
+                    <TableCell>
+                      {allocation.customerCode
+                        ? `${allocation.customerCode} - ${allocation.customerName}`
+                        : allocation.customerName || "-"}
+                    </TableCell>
+                    <TableCell>{allocation.allocatedQuantity}</TableCell>
+                    <TableCell>
+                      {allocation.salesLineStatus ? (
+                        <Badge variant="outline">
+                          {allocation.salesLineStatus.replaceAll("_", " ")}
+                        </Badge>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    No allocations yet. Customer-linked purchase items materialize allocations when their workflow status creates sales lines.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </DetailCard>
+
       </div>
     </PageSection>
   );

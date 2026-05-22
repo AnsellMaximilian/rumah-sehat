@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 import { treeifyError } from "zod";
 import {
   CreateInvoiceSchema,
+  CreateManualInvoiceItemSchema,
   UpdateInvoiceSchema,
 } from "@/modules/invoices/invoice.schema";
 import {
   createInvoiceService,
+  createManualInvoiceItemService,
   deleteInvoiceService,
   regenerateDraftInvoiceService,
   updateInvoiceService,
@@ -196,4 +198,78 @@ export async function voidAndReissueInvoiceAction(id: string) {
       message: getActionErrorMessage(error, "Failed to void and reissue invoice"),
     };
   }
+}
+
+
+export type ManualInvoiceItemFormValues = {
+  invoiceId: string;
+  lineType: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  amount: string;
+};
+
+export type ManualInvoiceItemState = {
+  errors: TreeifiedFieldErrors<ManualInvoiceItemFormValues>;
+  message: string;
+  values: ManualInvoiceItemFormValues;
+};
+
+function getManualInvoiceItemValues(
+  invoiceId: string,
+  formData: FormData,
+): ManualInvoiceItemFormValues {
+  return {
+    invoiceId,
+    lineType: String(formData.get("lineType") ?? "adjustment"),
+    description: String(formData.get("description") ?? ""),
+    quantity: String(formData.get("quantity") ?? ""),
+    unitPrice: String(formData.get("unitPrice") ?? ""),
+    amount: String(formData.get("amount") ?? ""),
+  };
+}
+
+export async function createManualInvoiceItemAction(
+  invoiceId: string,
+  prevState: ManualInvoiceItemState,
+  formData: FormData,
+): Promise<ManualInvoiceItemState> {
+  const values = getManualInvoiceItemValues(invoiceId, formData);
+  const validatedFields = CreateManualInvoiceItemSchema.safeParse(values);
+
+  if (!validatedFields.success) {
+    return {
+      errors: treeifyError(validatedFields.error).properties || {},
+      message: "Validation failed",
+      values,
+    };
+  }
+
+  try {
+    await createManualInvoiceItemService(validatedFields.data);
+  } catch (error) {
+    console.error(error);
+    return {
+      errors: {},
+      message: getActionErrorMessage(error, "Failed to add invoice item"),
+      values,
+    };
+  }
+
+  revalidatePath("/dashboard/invoices");
+  revalidatePath(`/dashboard/invoices/${invoiceId}`);
+
+  return {
+    errors: {},
+    message: "Invoice item added",
+    values: {
+      invoiceId,
+      lineType: values.lineType,
+      description: "",
+      quantity: "",
+      unitPrice: "",
+      amount: "",
+    },
+  };
 }

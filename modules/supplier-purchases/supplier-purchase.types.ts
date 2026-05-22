@@ -55,7 +55,28 @@ export type SupplierPurchaseItem = {
   updatedAt: Date;
 };
 
+
+export type SupplierPurchaseAllocation = {
+  id: string;
+  supplierPurchaseItemId: string;
+  salesLineId: string;
+  allocatedQuantity: number;
+  salesLineQuantity: number | null;
+  salesLineStatus: string | null;
+  salesLineSourceMode: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  customerCode: string | null;
+  productId: string | null;
+  productName: string | null;
+  productCode: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+};
+
 export type SupplierPurchaseDetail = SupplierPurchase & {
+  allocations: SupplierPurchaseAllocation[];
   items: SupplierPurchaseItem[];
 };
 

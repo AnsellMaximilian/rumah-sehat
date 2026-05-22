@@ -67,34 +67,79 @@ async function syncStockMovementsBySource(input: {
       ),
     );
 
-  const existingBySourceId = new Map(
-    existingMovements
-      .filter((movement) => movement.sourceId)
-      .map((movement) => [movement.sourceId as string, movement]),
-  );
   const desiredBySourceId = new Map(
     desiredMovements.map((movement) => [movement.sourceId, movement]),
   );
   const affectedProductIds = new Set<string>();
+  const existingNetBySourceAndProduct = new Map<string, Map<string, number>>();
 
-  for (const existingMovement of existingMovements) {
-    const sourceId = existingMovement.sourceId;
-
-    if (!sourceId || desiredBySourceId.has(sourceId)) {
+  for (const movement of existingMovements) {
+    if (!movement.sourceId) {
       continue;
     }
 
-    await tx
-      .delete(stockMovements)
-      .where(eq(stockMovements.id, existingMovement.id));
+    const productNetBySource =
+      existingNetBySourceAndProduct.get(movement.sourceId) ?? new Map<string, number>();
 
-    affectedProductIds.add(existingMovement.productId);
+    productNetBySource.set(
+      movement.productId,
+      (productNetBySource.get(movement.productId) ?? 0) + movement.quantityDelta,
+    );
+    existingNetBySourceAndProduct.set(movement.sourceId, productNetBySource);
   }
 
-  for (const desiredMovement of desiredMovements) {
-    const existingMovement = existingBySourceId.get(desiredMovement.sourceId);
+  function resolveCorrectionMovementType() {
+    if (movementType === "delivery_out") {
+      return "delivery_correction";
+    }
 
-    if (!existingMovement) {
+    return "correction";
+  }
+
+  async function appendCorrection(input: {
+    notes: string | null;
+    occurredAt: Date;
+    productId: string;
+    quantityDelta: number;
+    sourceId: string;
+  }) {
+    if (input.quantityDelta === 0) {
+      return;
+    }
+
+    await tx.insert(stockMovements).values({
+      createdBy,
+      movementType: resolveCorrectionMovementType(),
+      notes: input.notes,
+      occurredAt: input.occurredAt,
+      productId: input.productId,
+      quantityDelta: input.quantityDelta,
+      sourceId: input.sourceId,
+      sourceType,
+    });
+
+    affectedProductIds.add(input.productId);
+  }
+
+  for (const sourceId of sourceIds) {
+    const desiredMovement = desiredBySourceId.get(sourceId);
+    const existingNetByProduct =
+      existingNetBySourceAndProduct.get(sourceId) ?? new Map<string, number>();
+
+    if (!desiredMovement) {
+      for (const [productId, currentNet] of existingNetByProduct) {
+        await appendCorrection({
+          notes: "Correction for removed stock source",
+          occurredAt: new Date(),
+          productId,
+          quantityDelta: -currentNet,
+          sourceId,
+        });
+      }
+      continue;
+    }
+
+    if (existingNetByProduct.size === 0) {
       await tx.insert(stockMovements).values({
         createdBy,
         movementType,
@@ -109,27 +154,30 @@ async function syncStockMovementsBySource(input: {
       continue;
     }
 
-    if (
-      existingMovement.productId === desiredMovement.productId &&
-      existingMovement.quantityDelta === desiredMovement.quantityDelta &&
-      existingMovement.occurredAt.getTime() === desiredMovement.occurredAt.getTime() &&
-      existingMovement.notes === desiredMovement.notes
-    ) {
-      continue;
-    }
+    for (const [productId, currentNet] of existingNetByProduct) {
+      if (productId === desiredMovement.productId) {
+        continue;
+      }
 
-    await tx
-      .update(stockMovements)
-      .set({
+      await appendCorrection({
         notes: desiredMovement.notes,
         occurredAt: desiredMovement.occurredAt,
-        productId: desiredMovement.productId,
-        quantityDelta: desiredMovement.quantityDelta,
-      })
-      .where(eq(stockMovements.id, existingMovement.id));
+        productId,
+        quantityDelta: -currentNet,
+        sourceId,
+      });
+    }
 
-    affectedProductIds.add(existingMovement.productId);
-    affectedProductIds.add(desiredMovement.productId);
+    const currentNet = existingNetByProduct.get(desiredMovement.productId) ?? 0;
+    const correctionDelta = desiredMovement.quantityDelta - currentNet;
+
+    await appendCorrection({
+      notes: desiredMovement.notes,
+      occurredAt: desiredMovement.occurredAt,
+      productId: desiredMovement.productId,
+      quantityDelta: correctionDelta,
+      sourceId,
+    });
   }
 
   return Array.from(affectedProductIds);
@@ -220,6 +268,34 @@ export async function syncDeliveryOutStockMovements(input: {
     sourceType: "sales_line",
     tx: input.tx,
   });
+}
+
+
+export async function insertStockMovement(input: {
+  createdBy: string;
+  movementType: string;
+  notes: string | null;
+  occurredAt: Date;
+  productId: string;
+  quantityDelta: number;
+  sourceId?: string | null;
+  sourceType?: string | null;
+}) {
+  const [stockMovement] = await db
+    .insert(stockMovements)
+    .values({
+      createdBy: input.createdBy,
+      movementType: input.movementType,
+      notes: input.notes,
+      occurredAt: input.occurredAt,
+      productId: input.productId,
+      quantityDelta: input.quantityDelta,
+      sourceId: input.sourceId ?? null,
+      sourceType: input.sourceType ?? null,
+    })
+    .returning();
+
+  return stockMovement;
 }
 
 export async function getProductStockSummaries(productIds: string[]) {

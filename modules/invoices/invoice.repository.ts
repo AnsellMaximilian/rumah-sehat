@@ -352,6 +352,28 @@ export async function getExistingInvoicedSourceIds(input: {
     .filter((value): value is string => value !== null);
 }
 
+
+export async function insertInvoiceItem(input: InvoiceItemMutationInput & {
+  invoiceId: string;
+}) {
+  const [invoiceItem] = await db
+    .insert(invoiceItems)
+    .values({
+      invoiceId: input.invoiceId,
+      lineType: input.lineType,
+      description: input.description,
+      productId: input.productId,
+      quantity: input.quantity,
+      unitPrice: input.unitPrice,
+      amount: input.amount,
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+    })
+    .returning();
+
+  return invoiceItem;
+}
+
 export async function insertInvoice(input: {
   invoice: InvoiceMutationInput;
   items: InvoiceItemMutationInput[];

@@ -8,10 +8,12 @@ import {
   Package,
   ScrollText,
   ReceiptText,
+  Route,
   ShoppingBasket,
   Shapes,
   Truck,
   User2,
+  Wallet,
 } from "lucide-react";
 import {
   Sidebar,
@@ -60,6 +62,16 @@ const sidebarItems = [
         label: "Delivery Charges",
         icon: Banknote,
         href: "/dashboard/delivery-charges",
+      },
+      {
+        label: "Delivery Types",
+        icon: Route,
+        href: "/dashboard/delivery-types",
+      },
+      {
+        label: "Accounts",
+        icon: Wallet,
+        href: "/dashboard/accounts",
       },
       {
         label: "Invoices",

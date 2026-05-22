@@ -16,6 +16,7 @@ import {
   customers,
   deliveries,
   deliveryItems,
+  deliveryTypes,
   products,
   salesLines,
   user,
@@ -28,6 +29,7 @@ type DeliveryMutationInput = {
   deliveredAt: Date | null;
   recordedAt: Date;
   deliveredBy: string | null;
+  deliveryTypeId: string | null;
   status: string;
   notes: string | null;
   createdBy: string;
@@ -86,10 +88,12 @@ function buildBaseDeliveryQuery() {
       ...deliveryColumns,
       customerName: customers.name,
       customerCode: customers.customerCode,
+      deliveryTypeName: deliveryTypes.name,
       createdByName: user.name,
     })
     .from(deliveries)
     .leftJoin(customers, eq(deliveries.customerId, customers.id))
+    .leftJoin(deliveryTypes, eq(deliveries.deliveryTypeId, deliveryTypes.id))
     .leftJoin(user, eq(deliveries.createdBy, user.id));
 }
 
@@ -171,11 +175,14 @@ export async function getAllDeliveries() {
       customerId: deliveries.customerId,
       customerCode: customers.customerCode,
       customerName: customers.name,
+      deliveryTypeId: deliveries.deliveryTypeId,
+      deliveryTypeName: deliveryTypes.name,
       recordedAt: deliveries.recordedAt,
       status: deliveries.status,
     })
     .from(deliveries)
     .leftJoin(customers, eq(deliveries.customerId, customers.id))
+    .leftJoin(deliveryTypes, eq(deliveries.deliveryTypeId, deliveryTypes.id))
     .where(isNull(deliveries.deletedAt))
     .orderBy(desc(deliveries.recordedAt), asc(customers.customerCode));
 }
@@ -427,6 +434,7 @@ export async function updateDelivery(
         deliveredAt: deliveries.deliveredAt,
         recordedAt: deliveries.recordedAt,
         status: deliveries.status,
+        deliveryTypeId: deliveries.deliveryTypeId,
       })
       .from(deliveries)
       .where(and(eq(deliveries.id, id), isNull(deliveries.deletedAt)));
@@ -542,6 +550,7 @@ export async function softDeleteDelivery(id: string) {
         deliveredAt: deliveries.deliveredAt,
         recordedAt: deliveries.recordedAt,
         status: deliveries.status,
+        deliveryTypeId: deliveries.deliveryTypeId,
       })
       .from(deliveries)
       .where(and(eq(deliveries.id, id), isNull(deliveries.deletedAt)));

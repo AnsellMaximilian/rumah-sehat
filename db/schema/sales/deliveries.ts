@@ -9,7 +9,10 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { user } from "@/db/schema/auth";
+import { accountEntries, accounts } from "./accounts";
 import { customers } from "./customers";
+import { deliveryTypes } from "./delivery-types";
+import { invoiceItems } from "./invoices";
 import { products } from "./products";
 import { salesLines } from "./sales-lines";
 
@@ -21,6 +24,9 @@ export const deliveries = pgTable("deliveries", {
   deliveredAt: timestamp("delivered_at"),
   recordedAt: timestamp("recorded_at").notNull(),
   deliveredBy: varchar("delivered_by", { length: 255 }),
+  deliveryTypeId: uuid("delivery_type_id").references(() => deliveryTypes.id, {
+    onDelete: "set null",
+  }),
   status: varchar("status", { length: 32 }).notNull(),
   notes: text("notes"),
   createdBy: text("created_by")
@@ -66,6 +72,15 @@ export const deliveryCharges = pgTable("delivery_charges", {
   description: varchar("description", { length: 255 }).notNull(),
   amount: integer("amount").notNull(),
   billToCustomer: boolean("bill_to_customer").notNull().default(true),
+  accountId: uuid("account_id").references(() => accounts.id, {
+    onDelete: "set null",
+  }),
+  accountEntryId: uuid("account_entry_id").references(() => accountEntries.id, {
+    onDelete: "set null",
+  }),
+  invoiceItemId: uuid("invoice_item_id").references(() => invoiceItems.id, {
+    onDelete: "set null",
+  }),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

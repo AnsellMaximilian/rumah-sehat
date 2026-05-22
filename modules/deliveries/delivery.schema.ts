@@ -9,6 +9,21 @@ function nullableText(max: number, label: string) {
     .transform((value) => value || null);
 }
 
+
+function nullableUuid(label: string) {
+  return z.preprocess(
+    (value) => {
+      if (typeof value === "string") {
+        const normalized = value.trim();
+        return normalized || null;
+      }
+
+      return value;
+    },
+    z.union([z.string().uuid(`${label} is invalid`), z.null()]),
+  );
+}
+
 function nullableDateTime(label: string) {
   return z.preprocess(
     (value) => {
@@ -127,6 +142,7 @@ const DeliveryBaseSchema = z.object({
       .refine((value) => !Number.isNaN(value.getTime()), "Recorded at is invalid"),
   ),
   deliveredBy: nullableText(255, "Delivered by"),
+  deliveryTypeId: nullableUuid("Delivery type"),
   status: z.enum(DELIVERY_STATUSES, {
     error: () => ({ message: "Status is required" }),
   }),
@@ -152,6 +168,7 @@ export const UpdateDeliverySchema = z.object({
   deliveredAt: DeliveryBaseSchema.shape.deliveredAt.optional(),
   recordedAt: DeliveryBaseSchema.shape.recordedAt.optional(),
   deliveredBy: DeliveryBaseSchema.shape.deliveredBy.optional(),
+  deliveryTypeId: DeliveryBaseSchema.shape.deliveryTypeId.optional(),
   status: DeliveryBaseSchema.shape.status.optional(),
   notes: DeliveryBaseSchema.shape.notes.optional(),
   items: z.array(DeliveryItemSchema).optional(),

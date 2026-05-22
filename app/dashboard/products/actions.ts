@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { treeifyError } from "zod";
+import { CreateStockMovementSchema } from "@/modules/stock-movements/stock-movement.schema";
+import { createStockMovementService } from "@/modules/stock-movements/stock-movement.service";
 import { CreateProductSchema } from "@/modules/products/product.schema";
 import {
   createProductService,
@@ -138,4 +140,74 @@ export async function deleteProductAction(id: string) {
     console.error(error);
     return { success: false, message: "Failed to delete product" };
   }
+}
+
+
+export type StockMovementFormValues = {
+  productId: string;
+  quantityDelta: string;
+  movementType: string;
+  occurredAt: string;
+  notes: string;
+};
+
+export type StockMovementState = {
+  errors: TreeifiedFieldErrors<StockMovementFormValues>;
+  message: string;
+  values: StockMovementFormValues;
+};
+
+function getStockMovementValues(
+  productId: string,
+  formData: FormData,
+): StockMovementFormValues {
+  return {
+    productId,
+    quantityDelta: String(formData.get("quantityDelta") ?? ""),
+    movementType: String(formData.get("movementType") ?? "manual_adjustment"),
+    occurredAt: String(formData.get("occurredAt") ?? ""),
+    notes: String(formData.get("notes") ?? ""),
+  };
+}
+
+export async function createStockMovementAction(
+  productId: string,
+  prevState: StockMovementState,
+  formData: FormData,
+): Promise<StockMovementState> {
+  const values = getStockMovementValues(productId, formData);
+  const validatedFields = CreateStockMovementSchema.safeParse(values);
+
+  if (!validatedFields.success) {
+    return {
+      errors: treeifyError(validatedFields.error).properties || {},
+      message: "Validation failed",
+      values,
+    };
+  }
+
+  try {
+    await createStockMovementService(validatedFields.data);
+  } catch (error) {
+    console.error(error);
+    return {
+      errors: {},
+      message: getActionErrorMessage(error, "Failed to create stock movement"),
+      values,
+    };
+  }
+
+  revalidatePath(`/dashboard/products/${productId}`);
+
+  return {
+    errors: {},
+    message: "Stock movement added",
+    values: {
+      productId,
+      quantityDelta: "",
+      movementType: values.movementType,
+      occurredAt: values.occurredAt,
+      notes: "",
+    },
+  };
 }

@@ -1,9 +1,15 @@
 import PageSection from "@/components/layout/page-section";
+import { getAllAccountsService } from "@/modules/accounts/account.service";
 import { getAllDeliveriesService } from "@/modules/deliveries/delivery.service";
+import { getAllDeliveryTypesService } from "@/modules/delivery-types/delivery-type.service";
 import DeliveryChargeForm from "../components/delivery-charge-form";
 
 export default async function Page() {
-  const deliveryOptions = await getAllDeliveriesService();
+  const [accountOptions, deliveryOptions, deliveryTypeOptions] = await Promise.all([
+    getAllAccountsService(),
+    getAllDeliveriesService(),
+    getAllDeliveryTypesService(),
+  ]);
 
   return (
     <PageSection
@@ -14,7 +20,11 @@ export default async function Page() {
         { label: "Add Delivery Charge" },
       ]}
     >
-      <DeliveryChargeForm deliveryOptions={deliveryOptions} />
+      <DeliveryChargeForm
+        accountOptions={accountOptions}
+        deliveryOptions={deliveryOptions}
+        deliveryTypeOptions={deliveryTypeOptions}
+      />
     </PageSection>
   );
 }

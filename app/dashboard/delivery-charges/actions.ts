@@ -22,6 +22,7 @@ export type DeliveryChargeFormValues = {
   description: string;
   amount: string;
   billToCustomer: string;
+  accountId: string;
   notes: string;
 };
 
@@ -38,6 +39,7 @@ function getDeliveryChargeValues(formData: FormData): DeliveryChargeFormValues {
     description: String(formData.get("description") ?? ""),
     amount: String(formData.get("amount") ?? ""),
     billToCustomer: String(formData.get("billToCustomer") ?? "true"),
+    accountId: String(formData.get("accountId") ?? ""),
     notes: String(formData.get("notes") ?? ""),
   };
 }

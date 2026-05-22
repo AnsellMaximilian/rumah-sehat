@@ -16,6 +16,8 @@ export type Delivery = {
   deliveredAt: Date | null;
   recordedAt: Date;
   deliveredBy: string | null;
+  deliveryTypeId: string | null;
+  deliveryTypeName: string | null;
   status: string;
   notes: string | null;
   createdBy: string;
@@ -54,6 +56,8 @@ export type DeliverySelectOption = {
   customerId: string;
   customerCode: string | null;
   customerName: string | null;
+  deliveryTypeId: string | null;
+  deliveryTypeName: string | null;
   recordedAt: Date;
   status: string;
 };
